@@ -1,4 +1,5 @@
 from src.enums.colors import Colors
+from src.states.state_interface import StateInterface
 from src.enums.game_states import GamePlayState, GameState
 
 import pygame
@@ -8,52 +9,52 @@ import pygame_gui
 from pygame.event import Event
 
 
-class GameplayState:
+class GameplayState(StateInterface):
     def __init__(self, game):
         self.game = game
+        self.ui_manager = pygame_gui.UIManager(
+            (self.game.cfg.screen_width, self.game.cfg.screen_height)
+        )
         self.sub_state = GamePlayState.QUERY_INPUT
 
+        # pygame_gui elements
+        self.query_input = None
+        self.submit_button = None
+
+        # messages
+        self.error_message = None
+        self.success_message = None
+
+        # query result
+        self.query_result = None
+
     def handle_event(self, event: Event):
+        # Process pygame_gui events first
+        self.ui_manager.process_events(event)
+
+        # Handle submit button click
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_object_id == "#submit_button":
+                self.game.db.execute_user_query(self)
+                return
+
         if event.type == pygame.KEYDOWN:
             if self.sub_state == GamePlayState.QUERY_INPUT:
                 if event.key == pygame.K_ESCAPE:
-                    # Clean up and return to level select
+                    # Don't have to clean up class attributes, since the state will be changed to LEVEL_SELECTOR
                     self.game.current_level = None
-                    self.game.current_query = ""
-                    self.game.query_result = None
-                    self.game.error_message = None
-                    self.game.success_message = None
-                    if self.game.query_input:
-                        self.game.query_input.kill()
-                        self.game.query_input = None
                     self.game.update_state(GameState.LEVEL_SELECTOR)
-                elif event.key == pygame.K_RETURN:
-                    # Execute query on Enter (will transition to result state if needed)
-                    self.game.execute_query()
 
             elif self.sub_state == GamePlayState.QUERY_RESULT:
                 if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
-                    if self.game.success_message:
+                    if self.success_message:
                         # Level completed, go back to level select
+                        self.game.current_level = None
                         self.game.update_state(GameState.LEVEL_SELECTOR)
                     else:
                         # Try again - go back to query input
-                        self.game.error_message = None
+                        self.error_message = None
                         self.sub_state = GamePlayState.QUERY_INPUT
-                        # Recreate input box if needed
-                        if not self.game.query_input and self.game.current_level:
-                            input_rect = pygame.Rect(
-                                50, 300, self.game.screen.get_width() - 100, 200
-                            )
-                            self.game.query_input = pygame_gui.elements.UITextEntryLine(
-                                relative_rect=pygame.Rect(
-                                    input_rect.x + 20,
-                                    input_rect.y + 35,
-                                    input_rect.width - 40,
-                                    30,
-                                ),
-                                manager=self.game.ui_manager,
-                            )
 
     def render(self):
         """Render gameplay screen based on substate"""
@@ -62,12 +63,14 @@ class GameplayState:
         elif self.sub_state == GamePlayState.QUERY_RESULT:
             self._render_result()
 
-    def _render_query_input(self):
-        """Render gameplay screen"""
-        if not self.game.current_level:
-            return
+    def update(self, time_delta: float):
+        """Update the state"""
+        self.ui_manager.update(time_delta)
 
+    def _render_query_input(self):
+        """Render substate QUERY_INPUT screen"""
         screen = self.game.screen
+
         # Level title
         title = self.game.cfg.font_medium.render(
             f"Level {self.game.current_level.level_num}: {self.game.current_level.title}",
@@ -115,7 +118,7 @@ class GameplayState:
                 y_offset += 18
 
         # Query input box background
-        input_box = pygame.Rect(50, 300, self.game.cfg.screen_width - 100, 200)
+        input_box = pygame.Rect(50, 305, self.game.cfg.screen_width - 100, 250)
         pygame.draw.rect(screen, Colors.DARKER_BG.value, input_box)
         pygame.draw.rect(screen, Colors.BORDER.value, input_box, 2)
 
@@ -124,15 +127,54 @@ class GameplayState:
         )
         screen.blit(input_label, (input_box.x + 10, input_box.y + 10))
 
-        # UITextEntryLine is positioned and rendered by pygame_gui
+        # Create query input and submit button pygame_gui elements
+        if not self.query_input:
+            input_rect = pygame.Rect(50, 300, self.game.cfg.screen_width - 100, 250)
+            button_width = 120
+            button_height = 40
+            button_padding = 10
+
+            # Input box takes most space, leaving room for label and button at bottom
+            input_box_height = input_rect.height - 35 - button_height - button_padding
+            input_box_y = input_rect.y + 35
+
+            # Button positioned at bottom left, aligned with query_input box left edge
+            # query_input box starts at input_rect.x + 20, so align button to that
+            button_x = input_rect.x + 20
+            # Move button down a bit more (reduce padding from 10 to 5)
+            button_y = input_rect.bottom - button_height - 5
+
+            self.query_input = pygame_gui.elements.UITextEntryBox(
+                relative_rect=pygame.Rect(
+                    input_rect.x + 20,
+                    input_box_y,
+                    input_rect.width - 40,
+                    input_box_height,
+                ),
+                manager=self.ui_manager,
+                object_id="#query_input",
+            )
+
+            self.submit_button = pygame_gui.elements.UIButton(
+                relative_rect=pygame.Rect(
+                    button_x,
+                    button_y,
+                    button_width,
+                    button_height,
+                ),
+                text="Submit Query",
+                manager=self.ui_manager,
+                object_id="#submit_button",
+            )
+        self.ui_manager.draw_ui(screen)
 
         # Error/Success message
         message_y = input_box.bottom + 20
-        if self.game.error_message:
+        if self.error_message:
             error_lines = self.game.wrap_text(
-                self.game.error_message,
-                self.game.cfg.font_small,
-                self.game.cfg.screen_width - 100,
+                self.error_message,
+                self.cfg.font_small,
+                self.cfg.screen_width - 100,
             )
             y_offset = message_y
             for line in error_lines:
@@ -140,9 +182,9 @@ class GameplayState:
                 screen.blit(text, (50, y_offset))
                 y_offset += 25
 
-        if self.game.success_message:
+        elif self.success_message:
             success_lines = self.game.wrap_text(
-                self.game.success_message,
+                self.success_message,
                 self.game.cfg.font_small,
                 self.game.cfg.screen_width - 100,
             )
@@ -153,7 +195,7 @@ class GameplayState:
                 y_offset += 25
 
         # Query results (if available)
-        if self.game.query_result is not None:
+        if self.query_result is not None:
             results_y = message_y + 60
             results_label = self.game.cfg.font_small.render(
                 "QUERY RESULTS:", True, Colors.ACCENT.value
@@ -167,13 +209,11 @@ class GameplayState:
             pygame.draw.rect(screen, Colors.BORDER.value, results_box, 2)
 
             # Display results (limited)
-            if self.game.query_result:
-                result_text = str(
-                    self.game.query_result[:3]
-                )  # Limit to first 3 records
-                if len(self.game.query_result) > 3:
+            if self.query_result:
+                result_text = str(self.query_result[:3])  # Limit to first 3 records
+                if len(self.query_result) > 3:
                     result_text += (
-                        f"\n... and {len(self.game.query_result) - 3} more records"
+                        f"\n... and {len(self.query_result) - 3} more records"
                     )
             else:
                 result_text = "No results returned"
@@ -189,7 +229,7 @@ class GameplayState:
 
         # Instructions
         instructions = [
-            "Press ENTER to execute query",
+            "Click 'Submit Query' button to execute",
             "Press ESC to return to level select",
         ]
         y_offset = self.game.cfg.screen_height - 60
@@ -201,12 +241,12 @@ class GameplayState:
             y_offset += 20
 
     def _render_result(self):
-        """Render result screen"""
+        """Render substate QUERY_RESULT screen"""
         screen = self.game.screen
-        if self.game.success_message:
+        if self.success_message:
             # Success screen
             message = self.game.cfg.font_large.render(
-                self.game.success_message, True, Colors.SUCCESS.value
+                self.success_message, True, Colors.SUCCESS.value
             )
             message_rect = message.get_rect(
                 center=(
@@ -228,9 +268,9 @@ class GameplayState:
             screen.blit(next_text, next_rect)
         else:
             # Error screen
-            if self.game.error_message:
+            if self.error_message:
                 message = self.game.cfg.font_medium.render(
-                    self.game.error_message, True, Colors.ERROR.value
+                    self.error_message, True, Colors.ERROR.value
                 )
                 message_rect = message.get_rect(
                     center=(

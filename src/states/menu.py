@@ -1,5 +1,6 @@
 from src.enums.colors import Colors
 from src.enums.game_states import GameState
+from src.states.state_interface import StateInterface
 
 import pygame
 
@@ -7,7 +8,7 @@ import pygame
 from pygame.event import Event
 
 
-class MenuState:
+class MenuState(StateInterface):
     def __init__(self, game):
         self.game = game
 
@@ -35,20 +36,6 @@ class MenuState:
         subtitle_rect = subtitle.get_rect(center=(self.game.cfg.screen_width // 2, 260))
         screen.blit(subtitle, subtitle_rect)
 
-        # Database connection status
-        if self.game.db:
-            status_text = self.game.cfg.font_small.render(
-                "✓ Database Connected", True, Colors.SUCCESS.value
-            )
-        else:
-            status_text = self.game.cfg.font_small.render(
-                "✗ Database Not Connected", True, Colors.ERROR.value
-            )
-        status_rect = status_text.get_rect(
-            center=(self.game.cfg.screen_width // 2, 310)
-        )
-        screen.blit(status_text, status_rect)
-
         # Instructions
         instructions = ["Press P or ENTER to Play", "Press ESC to Quit"]
         y_offset = 400
@@ -69,3 +56,7 @@ class MenuState:
                 (i + 200, self.game.cfg.screen_height),
                 1,
             )
+
+    def update(self, time_delta: float):
+        """Update the state"""
+        pass

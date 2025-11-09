@@ -1,5 +1,6 @@
 from src.enums.colors import Colors
 from src.enums.game_states import GameState
+from src.states.state_interface import StateInterface
 from src.save_handler.save_system import is_level_unlocked
 from src.cfg.levels_cfg import get_level, get_total_levels
 
@@ -9,7 +10,7 @@ import pygame
 from pygame.event import Event
 
 
-class LevelSelectorState:
+class LevelSelectorState(StateInterface):
     def __init__(self, game):
         self.game = game
 
@@ -26,7 +27,7 @@ class LevelSelectorState:
             ]:
                 level_num = int(event.unicode)
                 if is_level_unlocked(level_num):
-                    self.game.start_level(level_num)
+                    self.start_level(level_num)
                     self.game.update_state(GameState.GAMEPLAY)
 
     def render(self):
@@ -94,3 +95,11 @@ class LevelSelectorState:
             center=(self.game.cfg.screen_width // 2, self.game.cfg.screen_height - 50)
         )
         screen.blit(back_text, back_rect)
+
+    def update(self, time_delta: float):
+        """Update the state"""
+        pass
+
+    def start_level(self, level_num):
+        """Start a specific level"""
+        self.game.current_level = get_level(level_num)

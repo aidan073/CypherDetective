@@ -1,1 +1,1 @@
-from .levels_cfg import get_level, get_total_levels
+from .levels_cfg import Level, get_level, get_total_levels

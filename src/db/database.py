@@ -2,7 +2,15 @@
 Neo4j database connection and query execution module for CypherDetective
 """
 
+from src.enums.game_states import GamePlayState
+from src.save_handler.save_system import complete_level
+
 from neo4j import GraphDatabase
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.states.gameplay import GameplayState
+    from src.cfg.levels_cfg import Level
 
 
 class DatabaseConnection:
@@ -65,30 +73,38 @@ class DatabaseConnection:
         except Exception as e:
             raise Exception(f"Query execution error: {str(e)}")
 
-    def validate_query(self, query):
+    def execute_user_query(self, state: "GameplayState"):
         """
-        Validate that a query is read-only (no write operations)
+        Execute the player's Cypher query with validation and level completion logic
 
         Args:
-            query: Cypher query string
-
-        Returns:
-            bool: True if query appears to be read-only
+            state: GameplayState instance to update with results
         """
-        query_upper = query.upper().strip()
 
-        # Check for write operations
-        write_keywords = [
-            "CREATE",
-            "DELETE",
-            "SET",
-            "REMOVE",
-            "MERGE",
-            "DETACH",
-            "DROP",
-        ]
-        for keyword in write_keywords:
-            if keyword in query_upper:
-                return False
+        current_query = state.query_input.get_text()
+        current_level = state.game.current_level
 
-        return True
+        if not current_query.strip():
+            state.error_message = "Please enter a query."
+            state.sub_state = GamePlayState.QUERY_RESULT
+            return
+
+        try:
+            # Execute query
+            results = self.execute_query(current_query)
+            state.query_result = results
+
+            # Validate results using level validator
+            if current_level.validator(results):
+                complete_level(current_level.level_num)
+                state.success_message = f"Level {current_level.level_num} completed."
+                state.sub_state = GamePlayState.QUERY_RESULT
+            else:
+                state.error_message = "Query executed successfully, but the results don't match the clue. Try again."
+                state.sub_state = GamePlayState.QUERY_RESULT
+
+        except Exception as e:
+            state.query_result = None
+            state.error_message = f"Query error: {str(e)}"
+            state.sub_state = GamePlayState.QUERY_RESULT
+            return
