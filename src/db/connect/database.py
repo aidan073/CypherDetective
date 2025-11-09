@@ -16,9 +16,6 @@ class DatabaseConnection:
             uri: Neo4j URI (defaults to Aura connection)
             user: Database username (defaults to 'detective')
             password: Database password (defaults to 'detective073')
-
-        Note: Set NEO4J_URI environment variable or provide URI directly.
-        Format: neo4j+s://<instance-id>.databases.neo4j.io
         """
         # Get db values from environment variables or use defaults
         self.uri = "neo4j+s://2de166ea.databases.neo4j.io"

@@ -12,8 +12,8 @@ from src.save_handler.save_system import (
     get_highest_unlocked_level,
 )
 
-import pygame
 import sys
+import pygame
 
 
 # Initialize Pygame
