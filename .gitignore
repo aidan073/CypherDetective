@@ -1,0 +1,7 @@
+*.pyc
+__pycache__/
+.env
+
+.db_info/
+.user_data/
+game_idea/
