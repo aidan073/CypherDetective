@@ -3,7 +3,6 @@ Neo4j database connection and query execution module for CypherDetective
 """
 
 from neo4j import GraphDatabase
-import os
 
 
 class DatabaseConnection:
