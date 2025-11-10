@@ -23,9 +23,12 @@ import os
 import sys
 import pygame
 
+# import psutil
+
 
 # Initialize Pygame
 pygame.init()
+# process = psutil.Process(os.getpid())
 
 
 class GameManager:
@@ -72,6 +75,9 @@ class GameManager:
 
     def update(self, time_delta):
         """Update game"""
+        # cpu = process.cpu_percent(interval=None)
+        # mem = process.memory_info().rss / (1024**2)  # in MB
+        # print(f"CPU usage: {cpu:.2f}%, Memory usage: {mem:.2f} MB")
         self.state.update(time_delta)
 
     def update_state(self, state: GameState):

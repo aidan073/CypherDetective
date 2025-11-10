@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 @dataclass
 class GameConfig:
+    # Game settings
     fps: int = 60
     screen_width: int = 1200
     screen_height: int = 800
