@@ -21,7 +21,6 @@ CREATE
     hair: "blonde",
     height: 5.7,
     blood_type: "B+",
-    employee: false,
     access_level: 0,
     graph_0: true
 }),
@@ -31,7 +30,6 @@ CREATE
     hair: "brown",
     height: 6.1,
     blood_type: "O+",
-    employee: false,
     access_level: 0,
     graph_0: true
 }),
@@ -41,7 +39,6 @@ CREATE
     hair: "red",
     height: 5.5,
     blood_type: "A-",
-    employee: true,
     access_level: 3,
     graph_0: true, graph_1: true, graph_2: true, graph_3: true, graph_4: true
 }),
@@ -51,7 +48,6 @@ CREATE
     hair: "brown",
     height: 6.2,
     blood_type: "O+",
-    employee: true,
     access_level: 2,
     graph_0: true, graph_1: true, graph_2: true, graph_3: true, graph_4: true, graph_5: true, graph_6: true, graph_7: true, graph_8: true
 }),
@@ -61,7 +57,6 @@ CREATE
     hair: "black",
     height: 5.6,
     blood_type: "AB-",
-    employee: false,
     access_level: 0,
     graph_0: true, graph_1: true
 }),
@@ -71,7 +66,6 @@ CREATE
     hair: "brown",
     height: 6.0,
     blood_type: "O+",
-    employee: true,
     access_level: 1,
     graph_0: true, graph_1: true, graph_2: true, graph_3: true
 }),
@@ -81,7 +75,6 @@ CREATE
     hair: "brown",
     height: 6.0,
     blood_type: "O+",
-    employee: true,
     access_level: 2,
     graph_0: true, graph_1: true, graph_2: true, graph_3: true, graph_4: true, graph_5: true, graph_6: true, graph_7: true
 }),
@@ -91,7 +84,6 @@ CREATE
     hair: "brown",
     height: 6.3,
     blood_type: "O+",
-    employee: true,
     access_level: 2,
     graph_0: true, graph_1: true, graph_2: true, graph_3: true, graph_4: true, graph_5: true, graph_6: true
 }),
@@ -101,7 +93,6 @@ CREATE
     hair: "brown",
     height: 6.0,
     blood_type: "B+",
-    employee: true,
     access_level: 3,
     graph_0: true, graph_1: true, graph_2: true, graph_3: true, graph_4: true, graph_5: true
 }),
@@ -111,7 +102,6 @@ CREATE
     hair: "blonde",
     height: 6.1,
     blood_type: "O+",
-    employee: false,
     access_level: 0,
     graph_0: true, graph_1: true, graph_2: true
 });
@@ -129,7 +119,7 @@ FOREACH (_ IN CASE WHEN s.name IN ["Jack Knight", "Ben Carter"] THEN [1] ELSE []
 // Employees (hotel workers)
 MATCH (hotel:Location {name: "Grandview Hotel"})
 MATCH (s:Suspect)
-WHERE s.employee = true
+WHERE s.access_level > 0
 CREATE (s)-[:WORKS_AT]->(hotel);
 
 // === Victim Relationships ===

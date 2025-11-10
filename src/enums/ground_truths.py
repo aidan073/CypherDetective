@@ -4,12 +4,13 @@ from enum import Enum
 class LevelGroundTruth(Enum):
     LEVEL_1 = """
     MATCH (s:Suspect)
-    WHERE s.verified_alibi = true
+    WHERE s.verified_alibi = false
     RETURN s.name AS suspect
     """
 
     LEVEL_2 = """
-    MATCH (s:Suspect)-[:WAS_AT]->(l:Location {name: "Victim's Apartment Building"})
+    MATCH (s:Suspect) 
+    WHERE NOT (s)-[:WAS_AT]->(:Location {name: "Victim's Apartment Building"})
     RETURN s.name AS suspect
     """
 
@@ -19,7 +20,7 @@ class LevelGroundTruth(Enum):
     """
 
     LEVEL_4 = """
-    MATCH (s:Suspect)-[:WORKS_AT]->(h:Location {name: "Grandview Hotel"})
+    MATCH (s:Suspect)
     WHERE s.access_level >= 2
     RETURN s.name AS suspect
     """

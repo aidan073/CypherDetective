@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.states.gameplay import GameplayState
-    from src.cfg.levels_cfg import Level
 
 
 class DatabaseConnection:
@@ -93,6 +92,9 @@ class DatabaseConnection:
             # Execute query
             user_results = self.execute_query(current_query)
             ground_truth_results = self.execute_query(current_level.ground_truth_query)
+
+            print(f"User results: {user_results}")
+            print(f"Ground truth results: {ground_truth_results}")
 
             # Validate results using level validator
             if user_results == ground_truth_results:
