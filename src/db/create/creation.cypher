@@ -27,13 +27,13 @@ CREATE
 }),
 (s2:Suspect {
     name: "Ben Carter",
-    verified_alibi: false,
+    verified_alibi: true,
     hair: "brown",
     height: 6.1,
     blood_type: "O+",
     employee: false,
     access_level: 0,
-    graph_0: true, graph_1: true
+    graph_0: true
 }),
 (s3:Suspect {
     name: "Chloe Diaz",
@@ -63,7 +63,7 @@ CREATE
     blood_type: "AB-",
     employee: false,
     access_level: 0,
-    graph_0: true
+    graph_0: true, graph_1: true
 }),
 (s6:Suspect {
     name: "Frank Green",
@@ -122,9 +122,9 @@ MATCH
   (building:Location {name: "Victim's Apartment Building"}),
   (outside:Location {name: "Outside"})
 MATCH (s:Suspect)
-FOREACH (_ IN CASE WHEN s.name IN ["Alice Brown", "Ben Carter", "Ella Fisher"] THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(building))
+FOREACH (_ IN CASE WHEN s.name IN ["Alice Brown", "Ella Fisher"] THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(building))
 FOREACH (_ IN CASE WHEN s.name IN ["Chloe Diaz", "David Evans", "Frank Green", "Grace Hill", "Harry Irving", "Isla Jones"] THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(hotel))
-FOREACH (_ IN CASE WHEN s.name = "Jack Knight" THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(outside));
+FOREACH (_ IN CASE WHEN s.name IN ["Jack Knight", "Ben Carter"] THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(outside));
 
 // Employees (hotel workers)
 MATCH (hotel:Location {name: "Grandview Hotel"})

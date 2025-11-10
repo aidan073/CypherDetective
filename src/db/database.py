@@ -91,11 +91,11 @@ class DatabaseConnection:
 
         try:
             # Execute query
-            results = self.execute_query(current_query)
-            state.query_result = results
+            user_results = self.execute_query(current_query)
+            ground_truth_results = self.execute_query(current_level.ground_truth_query)
 
             # Validate results using level validator
-            if current_level.validator(results):
+            if user_results == ground_truth_results:
                 complete_level(current_level.level_num)
                 state.success_message = f"Level {current_level.level_num} completed."
                 state.sub_state = GamePlayState.QUERY_RESULT

@@ -1,8 +1,8 @@
 from src.enums.colors import Colors
 from src.enums.game_states import GameState
+from src.levels import get_level, get_total_levels
 from src.states.state_interface import StateInterface
 from src.save_handler.save_system import is_level_unlocked
-from src.cfg.levels_cfg import get_level, get_total_levels
 
 import pygame
 

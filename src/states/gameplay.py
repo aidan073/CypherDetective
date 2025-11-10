@@ -53,6 +53,7 @@ class GameplayState(StateInterface):
                         self.game.update_state(GameState.LEVEL_SELECTOR)
                     else:
                         # Try again - go back to query input
+                        self.query_result = None
                         self.error_message = None
                         self.sub_state = GamePlayState.QUERY_INPUT
 
@@ -61,7 +62,7 @@ class GameplayState(StateInterface):
         if self.sub_state == GamePlayState.QUERY_INPUT:
             self._render_query_input()
         elif self.sub_state == GamePlayState.QUERY_RESULT:
-            self._render_result()
+            self._render_query_result()
 
     def update(self, time_delta: float):
         """Update the state"""
@@ -168,65 +169,6 @@ class GameplayState(StateInterface):
             )
         self.ui_manager.draw_ui(screen)
 
-        # Error/Success message
-        message_y = input_box.bottom + 20
-        if self.error_message:
-            error_lines = self.game.wrap_text(
-                self.error_message,
-                self.cfg.font_small,
-                self.cfg.screen_width - 100,
-            )
-            y_offset = message_y
-            for line in error_lines:
-                text = self.game.cfg.font_small.render(line, True, Colors.ERROR.value)
-                screen.blit(text, (50, y_offset))
-                y_offset += 25
-
-        elif self.success_message:
-            success_lines = self.game.wrap_text(
-                self.success_message,
-                self.game.cfg.font_small,
-                self.game.cfg.screen_width - 100,
-            )
-            y_offset = message_y
-            for line in success_lines:
-                text = self.game.cfg.font_small.render(line, True, Colors.SUCCESS.value)
-                screen.blit(text, (50, y_offset))
-                y_offset += 25
-
-        # Query results (if available)
-        if self.query_result is not None:
-            results_y = message_y + 60
-            results_label = self.game.cfg.font_small.render(
-                "QUERY RESULTS:", True, Colors.ACCENT.value
-            )
-            screen.blit(results_label, (50, results_y))
-
-            results_box = pygame.Rect(
-                50, results_y + 25, self.game.cfg.screen_width - 100, 150
-            )
-            pygame.draw.rect(screen, Colors.DARKER_BG.value, results_box)
-            pygame.draw.rect(screen, Colors.BORDER.value, results_box, 2)
-
-            # Display results (limited)
-            if self.query_result:
-                result_text = str(self.query_result[:3])  # Limit to first 3 records
-                if len(self.query_result) > 3:
-                    result_text += (
-                        f"\n... and {len(self.query_result) - 3} more records"
-                    )
-            else:
-                result_text = "No results returned"
-
-            result_lines = self.game.wrap_text(
-                result_text, self.game.cfg.font_tiny, results_box.width - 20
-            )
-            y_offset = results_box.y + 10
-            for line in result_lines[:6]:  # Limit display lines
-                text = self.game.cfg.font_tiny.render(line, True, Colors.TEXT.value)
-                screen.blit(text, (results_box.x + 10, y_offset))
-                y_offset += 16
-
         # Instructions
         instructions = [
             "Click 'Submit Query' button to execute",
@@ -240,7 +182,7 @@ class GameplayState(StateInterface):
             screen.blit(text, (50, y_offset))
             y_offset += 20
 
-    def _render_result(self):
+    def _render_query_result(self):
         """Render substate QUERY_RESULT screen"""
         screen = self.game.screen
         if self.success_message:
