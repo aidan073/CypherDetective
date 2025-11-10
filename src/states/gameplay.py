@@ -1,18 +1,20 @@
 from src.enums.colors import Colors
 from src.states.state_interface import StateInterface
 from src.enums.game_states import GamePlayState, GameState
+from src.ui.gameplay_ui import create_graph_visualization, GraphVisualization
 
 import pygame
 import pygame_gui
 
 # For type hinting
+from typing import Optional
 from pygame.event import Event
 
 
 class GameplayState(StateInterface):
     def __init__(self, game):
         self.game = game
-        self.ui_manager = pygame_gui.UIManager(
+        self.pygame_gui_manager = pygame_gui.UIManager(
             (self.game.cfg.screen_width, self.game.cfg.screen_height)
         )
         self.sub_state = GamePlayState.QUERY_INPUT
@@ -28,9 +30,16 @@ class GameplayState(StateInterface):
         # query result
         self.query_result = None
 
+        # graph visualization
+        self.graph_visualization: Optional[GraphVisualization] = None
+
     def handle_event(self, event: Event):
         # Process pygame_gui events first
-        self.ui_manager.process_events(event)
+        self.pygame_gui_manager.process_events(event)
+
+        # Pass events to graph visualization
+        if self.graph_visualization:
+            self.graph_visualization.handle_event(event)
 
         # Handle submit button click
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
@@ -41,7 +50,7 @@ class GameplayState(StateInterface):
         if event.type == pygame.KEYDOWN:
             if self.sub_state == GamePlayState.QUERY_INPUT:
                 if event.key == pygame.K_ESCAPE:
-                    # Don't have to clean up class attributes, since the state will be changed to LEVEL_SELECTOR
+                    self.clean_up()
                     self.game.current_level = None
                     self.game.update_state(GameState.LEVEL_SELECTOR)
 
@@ -49,6 +58,7 @@ class GameplayState(StateInterface):
                 if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
                     if self.success_message:
                         # Level completed, go back to level select
+                        self.clean_up()
                         self.game.current_level = None
                         self.game.update_state(GameState.LEVEL_SELECTOR)
                     else:
@@ -66,7 +76,13 @@ class GameplayState(StateInterface):
 
     def update(self, time_delta: float):
         """Update the state"""
-        self.ui_manager.update(time_delta)
+        self.pygame_gui_manager.update(time_delta)
+
+    def clean_up(self):
+        """Clean up the state"""
+        if self.graph_visualization:
+            self.graph_visualization.clean_up()
+            self.graph_visualization = None
 
     def _render_query_input(self):
         """Render substate QUERY_INPUT screen"""
@@ -152,7 +168,7 @@ class GameplayState(StateInterface):
                     input_rect.width - 40,
                     input_box_height,
                 ),
-                manager=self.ui_manager,
+                manager=self.pygame_gui_manager,
                 object_id="#query_input",
             )
 
@@ -164,10 +180,26 @@ class GameplayState(StateInterface):
                     button_height,
                 ),
                 text="Submit Query",
-                manager=self.ui_manager,
+                manager=self.pygame_gui_manager,
                 object_id="#submit_button",
             )
-        self.ui_manager.draw_ui(screen)
+
+        # Initialize and render graph visualization
+        if not self.graph_visualization and self.game.current_level:
+            self.graph_visualization = create_graph_visualization(self)
+        elif self.graph_visualization and self.game.current_level:
+            # Reload graph if level changed
+            if (
+                self.graph_visualization.current_level
+                != self.game.current_level.level_num
+            ):
+                self.graph_visualization.load_graph_for_level(
+                    self.game.current_level.level_num
+                )
+            # Render graph
+            self.graph_visualization.render(screen)
+
+        self.pygame_gui_manager.draw_ui(screen)
 
         # Instructions
         instructions = [

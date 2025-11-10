@@ -24,6 +24,9 @@ class LevelSelectorState(StateInterface):
                 pygame.K_3,
                 pygame.K_4,
                 pygame.K_5,
+                pygame.K_6,
+                pygame.K_7,
+                pygame.K_8,
             ]:
                 level_num = int(event.unicode)
                 if is_level_unlocked(level_num):
@@ -40,18 +43,36 @@ class LevelSelectorState(StateInterface):
         title_rect = title.get_rect(center=(self.game.cfg.screen_width // 2, 100))
         screen.blit(title, title_rect)
 
-        # Level buttons
+        # Level buttons - two columns of 4 levels each
         total_levels = get_total_levels()
 
         button_width = 300
         button_height = 80
-        start_x = self.game.cfg.screen_width // 2 - (button_width // 2)
-        start_y = 250
         spacing = 100
+
+        # Center the gap between columns on the screen
+        gap_width = 200
+        center_x = self.game.cfg.screen_width // 2
+
+        # Left column: levels 1-4
+        left_column_x = center_x - button_width - gap_width // 2
+        # Right column: levels 5-8
+        right_column_x = center_x + gap_width // 2
+
+        start_y = 200
 
         for i in range(1, total_levels + 1):
             level = get_level(i)
-            y = start_y + (i - 1) * spacing
+
+            # Determine column and position
+            if i <= 4:
+                # Left column (levels 1-4)
+                x = left_column_x
+                y = start_y + (i - 1) * spacing
+            else:
+                # Right column (levels 5-8)
+                x = right_column_x
+                y = start_y + (i - 5) * spacing
 
             # Check if unlocked
             unlocked = is_level_unlocked(i)
@@ -60,7 +81,7 @@ class LevelSelectorState(StateInterface):
             color = Colors.LIGHT_BG.value if unlocked else Colors.DARKER_BG.value
             border_color = Colors.ACCENT.value if unlocked else Colors.TEXT_DIM.value
 
-            button_rect = pygame.Rect(start_x, y, button_width, button_height)
+            button_rect = pygame.Rect(x, y, button_width, button_height)
             pygame.draw.rect(screen, color, button_rect)
             pygame.draw.rect(screen, border_color, button_rect, 2)
 

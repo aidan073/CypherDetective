@@ -1,0 +1,423 @@
+import math
+import pygame
+import pygame_gui
+import networkx as nx
+from src.enums.colors import Colors
+
+from typing import TYPE_CHECKING, Tuple, Optional, Set
+
+if TYPE_CHECKING:
+    from src.states.gameplay import GameplayState
+
+
+class GraphVisualization:
+    """Interactive graph visualization using NetworkX and pygame"""
+
+    def __init__(self, state: "GameplayState", rect: pygame.Rect):
+        self.state = state
+        self.rect = rect  # Area where graph is rendered
+        self.graph = nx.DiGraph()
+        self.pos = {}  # Node positions (computed once, kept static)
+        self.node_attributes = {}  # Store node attributes (name, role, etc.)
+        self.edge_attributes = {}  # Store edge attributes
+        self.layout_computed = False
+        self.current_level = None
+
+        # Interaction state
+        self.selected_node = None
+        self.highlighted_nodes: Set[str] = set()
+        self.dragging_node = None
+        self.drag_offset = (0, 0)
+        self.zoom = 1.0
+        self.pan_offset = (0, 0)
+        self.panning = False
+        self.pan_start = (0, 0)
+
+        # Node details overlay
+        self.show_node_details = False
+        self.details_node_id = None
+        self.details_panel = None
+
+        # Visual settings
+        self.node_radius = 15
+        self.node_colors = {
+            "Suspect": Colors.ACCENT.value,
+            "Victim": (200, 80, 80),  # Red-ish
+            "Location": (100, 150, 200),  # Blue-ish
+            "Bank": (100, 200, 150),  # Green-ish
+        }
+        self.default_node_color = (128, 128, 128)  # Gray
+        self.edge_color = (100, 100, 120)
+        self.selected_color = Colors.SUCCESS.value
+        self.highlight_color = Colors.ACCENT.value
+
+    def clean_up(self):
+        """Clean up the graph visualization"""
+        self.state = None
+
+    def load_graph_for_level(self, level_num: int):
+        """Load graph from Neo4j filtered by graph_n property for current level"""
+        if self.current_level == level_num and self.layout_computed:
+            return  # Already loaded for this level
+
+        self.current_level = level_num
+        self.graph.clear()
+        self.node_attributes.clear()
+        self.edge_attributes.clear()
+        self.layout_computed = False
+        self.selected_node = None
+        self.highlighted_nodes.clear()
+
+        try:
+            # Query all nodes
+            nodes_query = """
+            MATCH (n)
+            RETURN labels(n) as labels, properties(n) as props, elementId(n) as id
+            """
+            # Query all relationships
+            relationships_query = """
+            MATCH (a)-[r]->(b)
+            RETURN elementId(a) as source, type(r) as relationship, 
+                   elementId(b) as target, properties(r) as props
+            """
+            nodes_data = self.state.game.db.execute_query(nodes_query)
+            relationships_data = self.state.game.db.execute_query(relationships_query)
+
+            graph_prop = f"graph_{level_num - 1}"  # property to filter by level
+            filtered_nodes = []
+            for node in nodes_data:
+                props = node["props"]
+                labels = node["labels"]
+                if ("Suspect" not in labels and "Victim" not in labels) or props.get(
+                    graph_prop, False
+                ):
+                    filtered_nodes.append(node)
+
+            filtered_node_ids = {node["id"] for node in filtered_nodes}
+            filtered_relationships = []
+            for rel in relationships_data:
+                if (
+                    rel["source"] in filtered_node_ids
+                    and rel["target"] in filtered_node_ids
+                ):
+                    filtered_relationships.append(rel)
+
+            # Add nodes to NetworkX graph
+            for node in filtered_nodes:
+                node_id = node["id"]
+                labels = node["labels"]
+                props = node["props"]
+                primary_label = labels[0] if labels else "Unknown"
+                node_name = props.get("name", primary_label)
+
+                # Store attributes
+                self.node_attributes[node_id] = {
+                    "labels": labels,
+                    "primary_label": primary_label,
+                    "name": node_name,
+                    "properties": props,
+                }
+                self.graph.add_node(node_id)
+
+            # Add edges
+            for rel in filtered_relationships:
+                source = rel["source"]
+                target = rel["target"]
+                rel_type = rel["relationship"]
+                rel_props = rel.get("props", {})
+
+                if source in self.graph and target in self.graph:
+                    edge_key = (source, target)
+                    self.edge_attributes[edge_key] = {
+                        "type": rel_type,
+                        "properties": rel_props,
+                    }
+                    self.graph.add_edge(source, target)
+
+            # Compute layout once
+            self._compute_layout()
+            self.layout_computed = True
+
+        except Exception as e:
+            print(f"Error loading graph for level {level_num}: {e}")
+
+    def _compute_layout(self):
+        """Compute node positions using NetworkX layout algorithm"""
+        if len(self.graph) == 0:
+            return
+
+        # Use spring layout for better visualization
+        # Scale to fit within the rect
+        pos = nx.spring_layout(
+            self.graph,
+            k=2.0,
+            iterations=50,
+            seed=73,
+        )
+
+        # Scale and translate to fit in rect
+        if pos:
+            # Get bounding box of positions
+            x_coords = [p[0] for p in pos.values()]
+            y_coords = [p[1] for p in pos.values()]
+
+            if x_coords and y_coords:
+                min_x, max_x = min(x_coords), max(x_coords)
+                min_y, max_y = min(y_coords), max(y_coords)
+
+                # Add padding
+                padding = 50
+                width = max_x - min_x if max_x != min_x else 1
+                height = max_y - min_y if max_y != min_y else 1
+
+                # Scale to fit rect with padding
+                scale_x = (self.rect.width - 2 * padding) / width if width > 0 else 1
+                scale_y = (self.rect.height - 2 * padding) / height if height > 0 else 1
+                scale = min(scale_x, scale_y)
+
+                # Center in rect
+                center_x = (min_x + max_x) / 2
+                center_y = (min_y + max_y) / 2
+                rect_center_x = self.rect.centerx
+                rect_center_y = self.rect.centery
+
+                # Transform positions
+                for node_id, (x, y) in pos.items():
+                    # Scale and center
+                    new_x = (x - center_x) * scale + rect_center_x
+                    new_y = (y - center_y) * scale + rect_center_y
+                    self.pos[node_id] = (new_x, new_y)
+
+    def handle_event(self, event: pygame.event.Event):
+        """Handle pygame events for interaction"""
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left click
+                mouse_pos = event.pos
+                if self.rect.collidepoint(mouse_pos):
+                    # Check if clicking on a node
+                    clicked_node = self._get_node_at_position(mouse_pos)
+                    if clicked_node:
+                        self.selected_node = clicked_node
+                        self.dragging_node = clicked_node
+                        node_pos = self.pos[clicked_node]
+                        self.drag_offset = (  # offset of the node from the mouse position, to prevent snapping to the node
+                            mouse_pos[0] - node_pos[0],
+                            mouse_pos[1] - node_pos[1],
+                        )
+                        self._show_node_details(clicked_node)
+                    else:
+                        # Start panning
+                        self.panning = True
+                        self.pan_start = mouse_pos
+                        self.selected_node = None
+                        self.show_node_details = False
+            elif event.button == 4:  # Scroll up
+                if self.rect.collidepoint(event.pos):
+                    self.zoom = min(self.zoom * 1.1, 3.0)
+            elif event.button == 5:  # Scroll down
+                if self.rect.collidepoint(event.pos):
+                    self.zoom = max(self.zoom / 1.1, 0.5)
+
+        elif event.type == pygame.MOUSEMOTION:
+            if self.dragging_node and self.dragging_node in self.pos:
+                mouse_pos = event.pos
+                # Update node position
+                self.pos[self.dragging_node] = (
+                    mouse_pos[0] - self.drag_offset[0],
+                    mouse_pos[1] - self.drag_offset[1],
+                )
+            elif self.panning:
+                mouse_pos = event.pos
+                dx = mouse_pos[0] - self.pan_start[0]
+                dy = mouse_pos[1] - self.pan_start[1]
+                self.pan_offset = (
+                    self.pan_offset[0] + dx,
+                    self.pan_offset[1] + dy,
+                )
+                self.pan_start = mouse_pos
+
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:  # Left click release
+                self.dragging_node = None
+                self.panning = False
+
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.selected_node = None
+                self.show_node_details = False
+                if self.details_panel:
+                    self.details_panel.kill()
+                    self.details_panel = None
+
+    def _get_node_at_position(self, pos: Tuple[int, int]) -> Optional[str]:
+        """Get node ID at given screen position"""
+        for node_id, node_pos in self.pos.items():
+            # Apply zoom and pan transforms
+            transformed_pos = self._transform_position(node_pos)
+            # If Euclidean distance is less than or equal to node radius * zoom, return node ID
+            distance = (
+                (pos[0] - transformed_pos[0]) ** 2 + (pos[1] - transformed_pos[1]) ** 2
+            ) ** 0.5
+            if distance <= self.node_radius * self.zoom:
+                return node_id
+        return None
+
+    def _transform_position(self, pos: Tuple[float, float]) -> Tuple[float, float]:
+        """Apply zoom and pan transforms to a position"""
+        x, y = pos
+        # Apply pan
+        x += self.pan_offset[0]
+        y += self.pan_offset[1]
+        # Apply zoom around rect center
+        center_x, center_y = self.rect.center
+        x = center_x + (x - center_x) * self.zoom
+        y = center_y + (y - center_y) * self.zoom
+        return (x, y)
+
+    def _show_node_details(self, node_id: str):
+        """Show node details in a UI overlay"""
+        self.show_node_details = True
+        self.details_node_id = node_id
+
+        # Create details panel if it doesn't exist
+        if self.details_panel:
+            self.details_panel.kill()
+
+        attrs = self.node_attributes.get(node_id, {})
+        props = attrs.get("properties", {})
+        name = attrs.get("name", "Unknown")
+        labels = attrs.get("labels", [])
+
+        # Create text content
+        lines = [f"Name: {name}"]
+        lines.append(f"Type: {', '.join(labels)}")
+        lines.append("")
+        lines.append("Properties:")
+        for key, value in props.items():
+            if not key.startswith("graph_"):  # Skip graph_n properties
+                lines.append(f"  {key}: {value}")
+
+        # Create panel
+        panel_width = 300
+        panel_height = min(400, len(lines) * 25 + 40)
+        panel_x = self.rect.right + 20
+        panel_y = self.rect.top
+
+        self.details_panel = pygame_gui.elements.UIPanel(
+            relative_rect=pygame.Rect(panel_x, panel_y, panel_width, panel_height),
+            manager=self.state.pygame_gui_manager,
+            object_id="#node_details_panel",
+        )
+
+        # Add text
+        text_rect = pygame.Rect(10, 10, panel_width - 20, panel_height - 20)
+        text_box = pygame_gui.elements.UITextBox(
+            relative_rect=text_rect,
+            html_text="<br>".join(lines),
+            manager=self.state.pygame_gui_manager,
+            container=self.details_panel,
+        )
+
+    def highlight_nodes(self, node_ids: Set[str]):
+        """Highlight specific nodes"""
+        self.highlighted_nodes = node_ids
+
+    def render(self, screen: pygame.Surface):
+        """Render the graph visualization"""
+        if not self.layout_computed or len(self.graph) == 0:
+            return
+
+        # Draw background
+        pygame.draw.rect(screen, Colors.DARKER_BG.value, self.rect)
+        pygame.draw.rect(screen, Colors.BORDER.value, self.rect, 2)
+
+        # Draw edges first (so they appear behind nodes)
+        for source, target in self.graph.edges():
+            if source in self.pos and target in self.pos:
+                start_pos = self._transform_position(self.pos[source])
+                end_pos = self._transform_position(self.pos[target])
+
+                # Draw edge
+                pygame.draw.line(screen, self.edge_color, start_pos, end_pos, 2)
+
+                # Draw arrow head
+                self._draw_arrow(screen, start_pos, end_pos, self.edge_color)
+
+        # Draw nodes
+        for node_id in self.graph.nodes():
+            if node_id not in self.pos:
+                continue
+
+            pos = self._transform_position(self.pos[node_id])
+            attrs = self.node_attributes.get(node_id, {})
+            primary_label = attrs.get("primary_label", "Unknown")
+            node_name = attrs.get("name", primary_label)
+
+            # Determine color
+            if node_id == self.selected_node:
+                color = self.selected_color
+            elif node_id in self.highlighted_nodes:
+                color = self.highlight_color
+            else:
+                color = self.node_colors.get(primary_label, self.default_node_color)
+
+            # Draw node circle
+            radius = int(self.node_radius * self.zoom)
+            pygame.draw.circle(screen, color, (int(pos[0]), int(pos[1])), radius)
+            pygame.draw.circle(
+                screen, Colors.TEXT_BRIGHT.value, (int(pos[0]), int(pos[1])), radius, 2
+            )
+
+            # Draw node label
+            if self.zoom > 0.7:  # Only show labels when zoomed in enough
+                font = self.state.game.cfg.font_tiny
+                text = font.render(node_name, True, Colors.TEXT.value)
+                text_rect = text.get_rect(
+                    center=(int(pos[0]), int(pos[1]) + radius + 12)
+                )
+                screen.blit(text, text_rect)
+
+    def _draw_arrow(self, screen, start, end, color):
+        """Draw an arrow head at the end of an edge"""
+
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        angle = math.atan2(dy, dx)
+
+        arrow_length = 10
+        arrow_angle = math.pi / 6
+
+        # Calculate arrow points
+        x1 = end[0] - arrow_length * math.cos(angle - arrow_angle)
+        y1 = end[1] - arrow_length * math.sin(angle - arrow_angle)
+        x2 = end[0] - arrow_length * math.cos(angle + arrow_angle)
+        y2 = end[1] - arrow_length * math.sin(angle + arrow_angle)
+
+        # Draw arrow
+        pygame.draw.polygon(screen, color, [end, (x1, y1), (x2, y2)])
+
+
+def create_graph_visualization(state: "GameplayState") -> GraphVisualization:
+    """Create and initialize graph visualization for gameplay state"""
+    # Define area for graph visualization (right side of screen)
+    screen_width = state.game.cfg.screen_width
+    screen_height = state.game.cfg.screen_height
+
+    # Graph area: right side, positioned to not overlap with query input
+    # Query input is at x=50, width varies, so put graph on right side
+    graph_rect = pygame.Rect(
+        screen_width - 420,  # Right side with margin (420px from right)
+        250,  # Below clue/hint area
+        370,  # Width
+        min(
+            500, screen_height - 300
+        ),  # Height (max 500px, leave room for instructions)
+    )
+
+    visualization = GraphVisualization(state, graph_rect)
+
+    # Load graph for current level
+    if state.game.current_level:
+        visualization.load_graph_for_level(state.game.current_level.level_num)
+
+    return visualization
