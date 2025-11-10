@@ -11,7 +11,7 @@ class GameConfig:
     screen_height: int = 800
 
     def __post_init__(self):
-        self.font_large = pygame.font.Font(None, 48)
-        self.font_medium = pygame.font.Font(None, 32)
-        self.font_small = pygame.font.Font(None, 24)
-        self.font_tiny = pygame.font.Font(None, 18)
+        self.font_large = pygame.font.SysFont("Times New Roman", 32)
+        self.font_medium = pygame.font.SysFont("Times New Roman", 24)
+        self.font_small = pygame.font.SysFont("Arial", 20)
+        self.font_tiny = pygame.font.SysFont("Arial", 16)

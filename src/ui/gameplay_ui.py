@@ -397,23 +397,15 @@ class GraphVisualization:
         pygame.draw.polygon(screen, color, [end, (x1, y1), (x2, y2)])
 
 
-def create_graph_visualization(state: "GameplayState") -> GraphVisualization:
-    """Create and initialize graph visualization for gameplay state"""
-    # Define area for graph visualization (right side of screen)
-    screen_width = state.game.cfg.screen_width
-    screen_height = state.game.cfg.screen_height
+def create_graph_visualization(
+    state: "GameplayState", graph_rect: pygame.Rect
+) -> GraphVisualization:
+    """Create and initialize graph visualization for gameplay state
 
-    # Graph area: right side, positioned to not overlap with query input
-    # Query input is at x=50, width varies, so put graph on right side
-    graph_rect = pygame.Rect(
-        screen_width - 420,  # Right side with margin (420px from right)
-        250,  # Below clue/hint area
-        370,  # Width
-        min(
-            500, screen_height - 300
-        ),  # Height (max 500px, leave room for instructions)
-    )
-
+    Args:
+        state: The GameplayState instance
+        graph_rect: The pygame.Rect defining the graph visualization area
+    """
     visualization = GraphVisualization(state, graph_rect)
 
     # Load graph for current level

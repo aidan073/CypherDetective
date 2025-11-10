@@ -97,8 +97,23 @@ class GameplayState(StateInterface):
         title_rect = title.get_rect(center=(self.game.cfg.screen_width // 2, 50))
         screen.blit(title, title_rect)
 
-        # Lead/Clue box
-        clue_box = pygame.Rect(50, 100, self.game.cfg.screen_width - 100, 120)
+        # Calculate column layout: left 2/3, right 1/3
+        screen_width = self.game.cfg.screen_width
+        screen_height = self.game.cfg.screen_height
+        margin = 50
+        gap = 20
+        usable_width = screen_width - 2 * margin
+        left_width = int(usable_width * 2 / 3)
+        right_width = usable_width - left_width - gap
+
+        left_x = margin
+        right_x = margin + left_width + gap
+        top_y = 100  # Start below title
+
+        # Lead/Clue box - left column, taller
+        clue_box = pygame.Rect(
+            left_x, top_y, left_width, 180
+        )  # Increased height from 120 to 180
         pygame.draw.rect(screen, Colors.DARKER_BG.value, clue_box)
         pygame.draw.rect(screen, Colors.BORDER.value, clue_box, 2)
 
@@ -116,26 +131,32 @@ class GameplayState(StateInterface):
             screen.blit(text, (clue_box.x + 10, y_offset))
             y_offset += 25
 
-        # Hint (if available)
+        # Hint (if available) - left column
+        hint_bottom_y = clue_box.bottom
         if self.game.current_level.hint:
             hint_y = clue_box.bottom + 10
             hint_label = self.game.cfg.font_tiny.render(
                 "HINT:", True, Colors.TEXT_DIM.value
             )
-            screen.blit(hint_label, (50, hint_y))
+            screen.blit(hint_label, (left_x, hint_y))
             hint_lines = self.game.wrap_text(
                 self.game.current_level.hint,
                 self.game.cfg.font_tiny,
-                self.game.cfg.screen_width - 100,
+                left_width,
             )
             y_offset = hint_y + 20
             for line in hint_lines:
                 text = self.game.cfg.font_tiny.render(line, True, Colors.TEXT_DIM.value)
-                screen.blit(text, (50, y_offset))
+                screen.blit(text, (left_x, y_offset))
                 y_offset += 18
+            hint_bottom_y = y_offset
 
-        # Query input box background
-        input_box = pygame.Rect(50, 305, self.game.cfg.screen_width - 100, 250)
+        # Query input box background - left column
+        # Position it after hint, or after clue box if no hint
+        input_box_y = hint_bottom_y + 10
+
+        input_box_height = 250
+        input_box = pygame.Rect(left_x, input_box_y, left_width, input_box_height)
         pygame.draw.rect(screen, Colors.DARKER_BG.value, input_box)
         pygame.draw.rect(screen, Colors.BORDER.value, input_box, 2)
 
@@ -146,27 +167,26 @@ class GameplayState(StateInterface):
 
         # Create query input and submit button pygame_gui elements
         if not self.query_input:
-            input_rect = pygame.Rect(50, 300, self.game.cfg.screen_width - 100, 250)
             button_width = 120
             button_height = 40
             button_padding = 10
 
             # Input box takes most space, leaving room for label and button at bottom
-            input_box_height = input_rect.height - 35 - button_height - button_padding
-            input_box_y = input_rect.y + 35
+            input_box_height_inner = (
+                input_box.height - 35 - button_height - button_padding
+            )
+            input_box_y_inner = input_box.y + 35
 
             # Button positioned at bottom left, aligned with query_input box left edge
-            # query_input box starts at input_rect.x + 20, so align button to that
-            button_x = input_rect.x + 20
-            # Move button down a bit more (reduce padding from 10 to 5)
-            button_y = input_rect.bottom - button_height - 5
+            button_x = input_box.x + 20
+            button_y = input_box.bottom - button_height - 5
 
             self.query_input = pygame_gui.elements.UITextEntryBox(
                 relative_rect=pygame.Rect(
-                    input_rect.x + 20,
-                    input_box_y,
-                    input_rect.width - 40,
-                    input_box_height,
+                    input_box.x + 20,
+                    input_box_y_inner,
+                    input_box.width - 40,
+                    input_box_height_inner,
                 ),
                 manager=self.pygame_gui_manager,
                 object_id="#query_input",
@@ -184,10 +204,40 @@ class GameplayState(StateInterface):
                 object_id="#submit_button",
             )
 
+        # Store layout info for graph visualization
+        self._left_column_info = {
+            "x": left_x,
+            "width": left_width,
+            "top_y": top_y,
+        }
+        self._right_column_info = {
+            "x": right_x,
+            "width": right_width,
+            "top_y": top_y,
+            "bottom_y": input_box.bottom,
+        }
+
         # Initialize and render graph visualization
         if not self.graph_visualization and self.game.current_level:
-            self.graph_visualization = create_graph_visualization(self)
+            # Create graph with proper positioning
+            graph_rect = pygame.Rect(
+                self._right_column_info["x"],
+                self._right_column_info["top_y"],
+                self._right_column_info["width"],
+                self._right_column_info["bottom_y"] - self._right_column_info["top_y"],
+            )
+            self.graph_visualization = create_graph_visualization(self, graph_rect)
         elif self.graph_visualization and self.game.current_level:
+            # Update graph rect if layout changed
+            if hasattr(self, "_right_column_info"):
+                graph_rect = pygame.Rect(
+                    self._right_column_info["x"],
+                    self._right_column_info["top_y"],
+                    self._right_column_info["width"],
+                    self._right_column_info["bottom_y"]
+                    - self._right_column_info["top_y"],
+                )
+                self.graph_visualization.rect = graph_rect
             # Reload graph if level changed
             if (
                 self.graph_visualization.current_level

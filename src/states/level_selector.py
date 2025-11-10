@@ -104,7 +104,7 @@ class LevelSelectorState(StateInterface):
                     f"Press {i} to play", True, Colors.TEXT_DIM.value
                 )
                 key_rect = key_text.get_rect(
-                    center=(button_rect.centerx, button_rect.centery + 30)
+                    center=(button_rect.centerx, button_rect.centery + 25)
                 )
                 screen.blit(key_text, key_rect)
 

@@ -93,11 +93,15 @@ class DatabaseConnection:
             user_results = self.execute_query(current_query)
             ground_truth_results = self.execute_query(current_level.ground_truth_query)
 
-            print(f"User results: {user_results}")
-            print(f"Ground truth results: {ground_truth_results}")
+            # print(f"User results: {user_results}")
+            # print(f"Ground truth results: {ground_truth_results}")
+            user_results_sorted = sorted(user_results, key=lambda d: sorted(d.items()))
+            ground_truth_results_sorted = sorted(
+                ground_truth_results, key=lambda d: sorted(d.items())
+            )
 
             # Validate results using level validator
-            if user_results == ground_truth_results:
+            if user_results_sorted == ground_truth_results_sorted:
                 complete_level(current_level.level_num)
                 state.success_message = f"Level {current_level.level_num} completed."
                 state.sub_state = GamePlayState.QUERY_RESULT

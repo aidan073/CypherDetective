@@ -19,6 +19,7 @@ from src.save_handler.save_system import (
     get_highest_unlocked_level,
 )
 
+import os
 import sys
 import pygame
 
@@ -37,6 +38,9 @@ class GameManager:
         self.screen = pygame.display.set_mode(
             (self.cfg.screen_width, self.cfg.screen_height)
         )
+        self.icon = pygame.image.load(os.path.join("src", "assets", "icon.png"))
+        self.icon = pygame.transform.scale(self.icon, (64, 64))
+        pygame.display.set_icon(self.icon)
         pygame.display.set_caption("CypherDetective")
         self.clock = pygame.time.Clock()
 
