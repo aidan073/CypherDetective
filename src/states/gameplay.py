@@ -87,6 +87,7 @@ class GameplayState(StateInterface):
     def _render_query_input(self):
         """Render substate QUERY_INPUT screen"""
         screen = self.game.screen
+        screen.fill(Colors.DARK_BG.value)
 
         # Level title
         title = self.game.cfg.font_medium.render(
@@ -267,6 +268,8 @@ class GameplayState(StateInterface):
     def _render_query_result(self):
         """Render substate QUERY_RESULT screen"""
         screen = self.game.screen
+        screen.fill(Colors.DARK_BG.value)
+
         if self.success_message:
             # Success screen
             message = self.game.cfg.font_large.render(

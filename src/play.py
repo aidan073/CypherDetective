@@ -25,10 +25,11 @@ import pygame
 
 # import psutil
 
+# process = psutil.Process(os.getpid())
+
 
 # Initialize Pygame
 pygame.init()
-# process = psutil.Process(os.getpid())
 
 
 class GameManager:
@@ -37,10 +38,10 @@ class GameManager:
     def __init__(self):
         self.cfg = GameConfig()
         self.running = True
-        self.state = MenuState(self)
         self.screen = pygame.display.set_mode(
             (self.cfg.screen_width, self.cfg.screen_height)
         )
+        self.state = MenuState(self)
         self.icon = pygame.image.load(os.path.join("src", "assets", "icon.png"))
         self.icon = pygame.transform.scale(self.icon, (64, 64))
         pygame.display.set_icon(self.icon)
@@ -96,11 +97,8 @@ class GameManager:
 
     def render(self):
         """Render the current game display"""
-        self.screen.fill(Colors.DARK_BG.value)
-
         # Delegate rendering to current state
         self.state.render()
-
         pygame.display.flip()
 
     def wrap_text(self, text, font, max_width):

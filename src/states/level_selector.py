@@ -73,6 +73,8 @@ class LevelSelectorState(StateInterface):
     def render(self):
         """Render level selection screen"""
         screen = self.game.screen
+        screen.fill(Colors.DARK_BG.value)
+
         # Title
         title = self.game.cfg.font_large.render(
             "Select Level", True, Colors.ACCENT.value
