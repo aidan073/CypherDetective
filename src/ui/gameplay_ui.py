@@ -34,6 +34,12 @@ class GraphVisualization:
         self.panning = False
         self.pan_start = (0, 0)
 
+        # Track click state for showing details only on click-and-release
+        self.click_start_pos = None
+        self.click_start_node = None
+        self.click_start_edge = None
+        self.has_dragged = False
+
         # Details overlay (for both nodes and edges)
         self.show_node_details = False
         self.show_edge_details = False
@@ -201,33 +207,46 @@ class GraphVisualization:
             if event.button == 1:  # Left click
                 mouse_pos = event.pos
                 if self.rect.collidepoint(mouse_pos):
+                    # Track click start for detecting drags
+                    self.click_start_pos = mouse_pos
+                    self.has_dragged = False
+
                     # Check if clicking on a node first (nodes are larger targets)
                     clicked_node = self._get_node_at_position(mouse_pos)
                     if clicked_node:
                         self.selected_node = clicked_node
                         self.selected_edge = None
                         self.dragging_node = clicked_node
+                        self.click_start_node = clicked_node
+                        self.click_start_edge = None
                         node_pos = self.pos[clicked_node]
                         self.drag_offset = (  # offset of the node from the mouse position, to prevent snapping to the node
                             mouse_pos[0] - node_pos[0],
                             mouse_pos[1] - node_pos[1],
                         )
-                        self._show_node_details(clicked_node)
+                        # Don't show details yet - wait for mouse release
                     else:
                         # Check if clicking on an edge
                         clicked_edge = self._get_edge_at_position(mouse_pos)
                         if clicked_edge:
                             self.selected_edge = clicked_edge
                             self.selected_node = None
-                            self._show_edge_details(clicked_edge)
+                            self.click_start_edge = clicked_edge
+                            self.click_start_node = None
+                            # Don't show details yet - wait for mouse release
                         else:
                             # Start panning
                             self.panning = True
                             self.pan_start = mouse_pos
                             self.selected_node = None
                             self.selected_edge = None
+                            self.click_start_node = None
+                            self.click_start_edge = None
                             self.show_node_details = False
                             self.show_edge_details = False
+                            if self.details_panel:
+                                self.details_panel.kill()
+                                self.details_panel = None
                     consumed = True
 
             elif event.button == 4:  # Scroll up
@@ -239,8 +258,18 @@ class GraphVisualization:
                     self.zoom = max(self.zoom / 1.1, 0.5)
                     consumed = True
         elif event.type == pygame.MOUSEMOTION:
+            mouse_pos = event.pos
+
+            # Check if we've moved enough to consider it a drag (for both nodes and edges)
+            if self.click_start_pos:
+                drag_distance = (
+                    (mouse_pos[0] - self.click_start_pos[0]) ** 2
+                    + (mouse_pos[1] - self.click_start_pos[1]) ** 2
+                ) ** 0.5
+                if drag_distance > 5:  # Threshold for considering it a drag
+                    self.has_dragged = True
+
             if self.dragging_node and self.dragging_node in self.pos:
-                mouse_pos = event.pos
                 # Update node position
                 self.pos[self.dragging_node] = (
                     mouse_pos[0] - self.drag_offset[0],
@@ -248,7 +277,6 @@ class GraphVisualization:
                 )
                 consumed = True
             elif self.panning:
-                mouse_pos = event.pos
                 dx = mouse_pos[0] - self.pan_start[0]
                 dy = mouse_pos[1] - self.pan_start[1]
                 self.pan_offset = (
@@ -259,10 +287,22 @@ class GraphVisualization:
                 consumed = True
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:  # Left click release
+                # Show details panel only if we didn't drag
+                if not self.has_dragged:
+                    if self.click_start_node:
+                        self._show_node_details(self.click_start_node)
+                    elif self.click_start_edge:
+                        self._show_edge_details(self.click_start_edge)
+
+                # Clean up click tracking
                 self.dragging_node = None
                 self.panning = False
+                self.click_start_pos = None
+                self.click_start_node = None
+                self.click_start_edge = None
+                self.has_dragged = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+            if event.key == pygame.K_TAB:
                 self.selected_node = None
                 self.selected_edge = None
                 self.show_node_details = False
@@ -399,7 +439,7 @@ class GraphVisualization:
         )
         instruction_label = pygame_gui.elements.UILabel(
             relative_rect=instruction_rect,
-            text="Press 'ESC' to close",
+            text="Press 'TAB' to close",
             manager=self.state.pygame_gui_manager,
             container=self.details_panel,
         )
@@ -479,7 +519,7 @@ class GraphVisualization:
         )
         instruction_label = pygame_gui.elements.UILabel(
             relative_rect=instruction_rect,
-            text="Press 'ESC' to close",
+            text="Press 'TAB' to close",
             manager=self.state.pygame_gui_manager,
             container=self.details_panel,
         )
