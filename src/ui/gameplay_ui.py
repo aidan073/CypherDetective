@@ -88,9 +88,11 @@ class GraphVisualization:
             for node in nodes_data:
                 props = node["props"]
                 labels = node["labels"]
-                if ("Suspect" not in labels and "Victim" not in labels) or props.get(
-                    graph_prop, False
-                ):
+                if (
+                    "Suspect" not in labels
+                    and "Victim" not in labels
+                    and "Bank" not in labels
+                ) or props.get(graph_prop, False):
                     filtered_nodes.append(node)
 
             filtered_node_ids = {node["id"] for node in filtered_nodes}
@@ -190,6 +192,7 @@ class GraphVisualization:
 
     def handle_event(self, event: pygame.event.Event):
         """Handle pygame events for interaction"""
+        consumed = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left click
                 mouse_pos = event.pos
@@ -211,13 +214,16 @@ class GraphVisualization:
                         self.pan_start = mouse_pos
                         self.selected_node = None
                         self.show_node_details = False
+                    consumed = True
+
             elif event.button == 4:  # Scroll up
                 if self.rect.collidepoint(event.pos):
                     self.zoom = min(self.zoom * 1.1, 3.0)
+                    consumed = True
             elif event.button == 5:  # Scroll down
                 if self.rect.collidepoint(event.pos):
                     self.zoom = max(self.zoom / 1.1, 0.5)
-
+                    consumed = True
         elif event.type == pygame.MOUSEMOTION:
             if self.dragging_node and self.dragging_node in self.pos:
                 mouse_pos = event.pos
@@ -226,6 +232,7 @@ class GraphVisualization:
                     mouse_pos[0] - self.drag_offset[0],
                     mouse_pos[1] - self.drag_offset[1],
                 )
+                consumed = True
             elif self.panning:
                 mouse_pos = event.pos
                 dx = mouse_pos[0] - self.pan_start[0]
@@ -235,12 +242,11 @@ class GraphVisualization:
                     self.pan_offset[1] + dy,
                 )
                 self.pan_start = mouse_pos
-
+                consumed = True
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:  # Left click release
                 self.dragging_node = None
                 self.panning = False
-
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 self.selected_node = None
@@ -248,6 +254,8 @@ class GraphVisualization:
                 if self.details_panel:
                     self.details_panel.kill()
                     self.details_panel = None
+                    consumed = True
+        return consumed
 
     def _get_node_at_position(self, pos: Tuple[int, int]) -> Optional[str]:
         """Get node ID at given screen position"""
@@ -287,6 +295,7 @@ class GraphVisualization:
         props = attrs.get("properties", {})
         name = attrs.get("name", "Unknown")
         labels = attrs.get("labels", [])
+        pos = self.pos.get(node_id, (0, 0))
 
         # Create text content
         lines = [f"Name: {name}"]
@@ -300,8 +309,8 @@ class GraphVisualization:
         # Create panel
         panel_width = 300
         panel_height = min(400, len(lines) * 25 + 40)
-        panel_x = self.rect.right + 20
-        panel_y = self.rect.top
+        panel_x = int(self._transform_position(pos)[0] - panel_width / 2)
+        panel_y = int(self._transform_position(pos)[1] + self.node_radius * self.zoom)
 
         self.details_panel = pygame_gui.elements.UIPanel(
             relative_rect=pygame.Rect(panel_x, panel_y, panel_width, panel_height),

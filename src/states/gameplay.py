@@ -39,7 +39,9 @@ class GameplayState(StateInterface):
 
         # Pass events to graph visualization
         if self.graph_visualization:
-            self.graph_visualization.handle_event(event)
+            consumed = self.graph_visualization.handle_event(event)
+            if consumed:
+                return
 
         # Handle submit button click
         if event.type == pygame_gui.UI_BUTTON_PRESSED:

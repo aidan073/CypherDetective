@@ -129,9 +129,9 @@ CREATE (s)-[:CLOSE_FRIEND_OF]->(v);
 
 // === Create Banks ===
 CREATE
-(b1:Bank {name: "First National"}),
-(b2:Bank {name: "River City Bank"}),
-(b3:Bank {name: "Metro Credit Union"});
+(b1:Bank {name: "First National", graph_7: true}),
+(b2:Bank {name: "River City Bank", graph_7: true}),
+(b3:Bank {name: "Metro Credit Union", graph_7: true});
 
 // === Create Deposit Relationships with Amounts ===
 
