@@ -1,0 +1,20 @@
+{
+    "text_box": {
+        "colours": {
+            "dark_bg": "#0A080F",
+            "normal_border": "#50465A",
+            "selected_border": "#B4A0C8",
+            "text": "#E6E6EB",
+            "link_text": "#B4A0C8",
+            "link_hover": "#FFFFFF",
+            "link_selected": "#B4A0C8"
+        },
+        "misc": {
+            "border_width": "2",
+            "padding": "10,10",
+            "link_normal_underline": "0",
+            "link_hover_underline": "1",
+            "line_spacing": "1.2"
+        }
+    }
+}

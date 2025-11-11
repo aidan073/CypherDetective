@@ -3,8 +3,10 @@ from src.enums.game_states import GameState
 from src.states.state_interface import StateInterface
 
 import os
+import json
 import math
 import pygame
+import pygame_gui
 
 # For type hinting
 from pygame.event import Event
@@ -20,11 +22,47 @@ class MenuState(StateInterface):
             os.path.join("src", "assets", "menu_bg.png")
         ).convert()  # TODO: Look into convert, without it the cpu usage is much higher
 
+        # Initialize pygame_gui manager
+        self.pygame_gui_manager = pygame_gui.UIManager(
+            (self.game.cfg.screen_width, self.game.cfg.screen_height)
+        )
+
+        # Load and scale button image
+        button_image_raw = pygame.image.load(
+            os.path.join("src", "assets", "case_details_button.jpg")
+        ).convert_alpha()
+        button_scale = 0.15  # Scale to 15% of original size
+        original_size = button_image_raw.get_size()
+        new_size = (
+            int(original_size[0] * button_scale),
+            int(original_size[1] * button_scale),
+        )
+        self.button_image = pygame.transform.scale(button_image_raw, new_size)
+        self.pygame_gui_manager.get_theme().load_theme(
+            os.path.join("src", "ui", "theme_cfgs", "menu_themes.json")
+        )
+
+        # UI elements (created in render)
+        self.case_button = None
+        self.case_panel = None
+
     def handle_event(self, event: Event):
+        # Process pygame_gui events first
+        self.pygame_gui_manager.process_events(event)
+
+        # Handle button press
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_object_id == "#case_details_button":
+                if self.case_panel:
+                    self.case_panel.kill()
+                    self.case_panel = None
+                else:
+                    self._create_case_panel()
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 self.game.running = False
-            elif event.key == pygame.K_p or event.key == pygame.K_RETURN:
+            elif event.key == pygame.K_RETURN:
                 self.game.update_state(GameState.LEVEL_SELECTOR)
 
     def render(self):
@@ -125,7 +163,7 @@ class MenuState(StateInterface):
         screen.blit(subtitle, subtitle_rect)
 
         # Instructions with very subtle flicker
-        instructions = ["Press P or ENTER to Play", "Press ESC to Quit"]
+        instructions = ["Press ENTER to Play", "Press ESC to Quit"]
         y_offset = 400
         for i, instruction in enumerate(instructions):
             # Very subtle flicker for instructions (slightly offset per line)
@@ -144,6 +182,83 @@ class MenuState(StateInterface):
             screen.blit(text, text_rect)
             y_offset += 40
 
+        # Create button if it doesn't exist
+        if not self.case_button:
+            button_size = self.button_image.get_size()
+            button_padding = 10  # Padding from edges
+            # Position in bottom right corner of text box
+            button_x = text_box_x + text_box_width - button_size[0] - button_padding
+            button_y = text_box_top + text_box_height - button_size[1] - button_padding
+
+            # Create invisible button that covers the image area
+            self.case_button = pygame_gui.elements.UIButton(
+                relative_rect=pygame.Rect(
+                    button_x, button_y, button_size[0], button_size[1]
+                ),
+                text="",  # No text, we'll blit the image
+                manager=self.pygame_gui_manager,
+                object_id="#case_details_button",
+            )
+
+        # Draw pygame_gui elements first
+        self.pygame_gui_manager.draw_ui(screen)
+
+        # Blit button image on top (positioned where the button is)
+        if self.case_button:
+            button_rect = self.case_button.rect
+            screen.blit(self.button_image, (button_rect.x, button_rect.y))
+
+    def _create_case_panel(self):
+        """Create the scrollable case details panel"""
+        # Calculate text box bounds (same as in render)
+        text_box_width = self.game.cfg.screen_width * 0.4
+        text_box_x = self.game.cfg.screen_width * 0.5 - text_box_width / 2
+        text_box_bottom = self.game.cfg.screen_height * 0.65
+
+        # Position panel below text box
+        panel_spacing = 10
+        panel_y = text_box_bottom + panel_spacing
+        panel_height = min(400, self.game.cfg.screen_height - panel_y - 20)
+
+        # Create panel
+        panel_rect = pygame.Rect(text_box_x, panel_y, text_box_width, panel_height)
+        self.case_panel = pygame_gui.elements.UIPanel(
+            relative_rect=panel_rect,
+            manager=self.pygame_gui_manager,
+            object_id="#case_panel",
+        )
+
+        # Create scrollable text box inside panel
+        content_text = (
+            "Case Details<br><br>"
+            "This is a scrollable panel that can display case information.<br>"
+            "You can scroll through the content using the mouse wheel.<br><br>"
+            "Add your case details here...<br><br>"
+            "Line 1 of content<br>"
+            "Line 2 of content<br>"
+            "Line 3 of content<br>"
+            "Line 4 of content<br>"
+            "Line 5 of content<br>"
+            "Line 6 of content<br>"
+            "Line 7 of content<br>"
+            "Line 8 of content<br>"
+            "Line 9 of content<br>"
+            "Line 10 of content<br>"
+            "Line 11 of content<br>"
+            "Line 12 of content<br>"
+            "Line 13 of content<br>"
+            "Line 14 of content<br>"
+            "Line 15 of content"
+        )
+
+        text_box_rect = pygame.Rect(10, 10, text_box_width - 20, panel_height - 20)
+        pygame_gui.elements.UITextBox(
+            relative_rect=text_box_rect,
+            html_text=content_text,
+            manager=self.pygame_gui_manager,
+            container=self.case_panel,
+        )
+
     def update(self, time_delta: float):
         """Update the state with noir effects timing"""
         self.time_accumulator += time_delta
@@ -153,3 +268,6 @@ class MenuState(StateInterface):
 
         # Update shake timer (shakes less frequently)
         self.shake_timer += time_delta * 3.0  # Slower shake rate
+
+        # Update pygame_gui manager
+        self.pygame_gui_manager.update(time_delta)
