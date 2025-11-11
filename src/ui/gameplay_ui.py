@@ -445,6 +445,7 @@ class GraphVisualization:
         else:
             lines.append("No properties")
 
+        # TODO: Code below this is duplicated from _show_node_details, should be refactored
         # Create panel
         panel_width = 300
         instruction_height = 25  # Space for instruction text
@@ -520,6 +521,26 @@ class GraphVisualization:
                 # Draw arrow head
                 self._draw_arrow(screen, start_pos, end_pos, edge_color)
 
+                # Draw edge label when zoomed in enough
+                if self.zoom >= 1.5:
+                    edge_key = (source, target)
+                    edge_attrs = self.edge_attributes.get(edge_key, {})
+                    rel_type = edge_attrs.get("type", "Unknown")
+
+                    # Calculate midpoint of edge
+                    midpoint = (
+                        (start_pos[0] + end_pos[0]) / 2,
+                        (start_pos[1] + end_pos[1]) / 2,
+                    )
+
+                    # Render label text
+                    font = self.state.game.cfg.font_tiny
+                    text = font.render(rel_type, True, Colors.TEXT.value)
+                    text_rect = text.get_rect(
+                        center=(int(midpoint[0]), int(midpoint[1]))
+                    )
+                    screen.blit(text, text_rect)
+
         # Draw nodes
         for node_id in self.graph.nodes():
             if node_id not in self.pos:
@@ -557,12 +578,16 @@ class GraphVisualization:
         # Restore the original clipping rectangle
         screen.set_clip(old_clip)
 
+    def _calc_line_angle(self, start, end):
+        """Calculate the angle of a line between two points"""
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        return math.atan2(dy, dx)
+
     def _draw_arrow(self, screen, start, end, color):
         """Draw an arrow head at the end of an edge"""
 
-        dx = end[0] - start[0]
-        dy = end[1] - start[1]
-        angle = math.atan2(dy, dx)
+        angle = self._calc_line_angle(start, end)
 
         arrow_length = 10
         arrow_angle = math.pi / 6
