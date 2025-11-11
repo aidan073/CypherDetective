@@ -25,6 +25,7 @@ class GraphVisualization:
 
         # Interaction state
         self.selected_node = None
+        self.selected_edge = None  # Tuple of (source, target) or None
         self.highlighted_nodes: Set[str] = set()
         self.dragging_node = None
         self.drag_offset = (0, 0)
@@ -33,9 +34,11 @@ class GraphVisualization:
         self.panning = False
         self.pan_start = (0, 0)
 
-        # Node details overlay
+        # Details overlay (for both nodes and edges)
         self.show_node_details = False
+        self.show_edge_details = False
         self.details_node_id = None
+        self.details_edge = None  # Tuple of (source, target) or None
         self.details_panel = None
 
         # Visual settings
@@ -66,6 +69,7 @@ class GraphVisualization:
         self.edge_attributes.clear()
         self.layout_computed = False
         self.selected_node = None
+        self.selected_edge = None
         self.highlighted_nodes.clear()
 
         try:
@@ -197,10 +201,11 @@ class GraphVisualization:
             if event.button == 1:  # Left click
                 mouse_pos = event.pos
                 if self.rect.collidepoint(mouse_pos):
-                    # Check if clicking on a node
+                    # Check if clicking on a node first (nodes are larger targets)
                     clicked_node = self._get_node_at_position(mouse_pos)
                     if clicked_node:
                         self.selected_node = clicked_node
+                        self.selected_edge = None
                         self.dragging_node = clicked_node
                         node_pos = self.pos[clicked_node]
                         self.drag_offset = (  # offset of the node from the mouse position, to prevent snapping to the node
@@ -209,11 +214,20 @@ class GraphVisualization:
                         )
                         self._show_node_details(clicked_node)
                     else:
-                        # Start panning
-                        self.panning = True
-                        self.pan_start = mouse_pos
-                        self.selected_node = None
-                        self.show_node_details = False
+                        # Check if clicking on an edge
+                        clicked_edge = self._get_edge_at_position(mouse_pos)
+                        if clicked_edge:
+                            self.selected_edge = clicked_edge
+                            self.selected_node = None
+                            self._show_edge_details(clicked_edge)
+                        else:
+                            # Start panning
+                            self.panning = True
+                            self.pan_start = mouse_pos
+                            self.selected_node = None
+                            self.selected_edge = None
+                            self.show_node_details = False
+                            self.show_edge_details = False
                     consumed = True
 
             elif event.button == 4:  # Scroll up
@@ -250,7 +264,9 @@ class GraphVisualization:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 self.selected_node = None
+                self.selected_edge = None
                 self.show_node_details = False
+                self.show_edge_details = False
                 if self.details_panel:
                     self.details_panel.kill()
                     self.details_panel = None
@@ -269,6 +285,50 @@ class GraphVisualization:
             if distance <= self.node_radius * self.zoom:
                 return node_id
         return None
+
+    def _get_edge_at_position(self, pos: Tuple[int, int]) -> Optional[Tuple[str, str]]:
+        """Get edge at given screen position"""
+        for source, target in self.graph.edges():
+            if source in self.pos and target in self.pos:
+                start_pos = self._transform_position(self.pos[source])
+                end_pos = self._transform_position(self.pos[target])
+                if self._is_point_on_line(pos, (start_pos, end_pos)):
+                    return (source, target)
+        return None
+
+    def _is_point_on_line(
+        self,
+        point: Tuple[int, int],
+        line: Tuple[Tuple[int, int], Tuple[int, int]],
+        thickness: float = 2,
+        tolerance: float = 2,
+    ) -> bool:
+        """Check if point is visually on a finite line segment."""
+        (x1, y1), (x2, y2) = line
+        x, y = point
+
+        # Compute a margin for visual thickness
+        margin = (thickness / 2) + tolerance
+
+        # Quick bounding box rejection
+        if (
+            x < min(x1, x2) - margin
+            or x > max(x1, x2) + margin
+            or y < min(y1, y2) - margin
+            or y > max(y1, y2) + margin
+        ):
+            return False
+
+        # Degenerate case: start == end
+        line_len_sq = (x2 - x1) ** 2 + (y2 - y1) ** 2
+        if line_len_sq == 0:
+            return math.hypot(x - x1, y - y1) <= margin
+
+        # Cross product (for perpendicular distance)
+        cross = abs((x - x1) * (y2 - y1) - (y - y1) * (x2 - x1))
+        distance = cross / math.sqrt(line_len_sq)
+
+        return distance <= margin
 
     def _transform_position(self, pos: Tuple[float, float]) -> Tuple[float, float]:
         """Apply zoom and pan transforms to a position"""
@@ -308,7 +368,8 @@ class GraphVisualization:
 
         # Create panel
         panel_width = 300
-        panel_height = min(400, len(lines) * 25 + 40)
+        instruction_height = 25  # Space for instruction text
+        panel_height = min(400, len(lines) * 25 + 40) + instruction_height
         panel_x = int(self._transform_position(pos)[0] - panel_width / 2)
         panel_y = int(self._transform_position(pos)[1] + self.node_radius * self.zoom)
 
@@ -318,11 +379,106 @@ class GraphVisualization:
             object_id="#node_details_panel",
         )
 
-        # Add text
-        text_rect = pygame.Rect(10, 10, panel_width - 20, panel_height - 20)
+        # Add text (leave room for instruction at bottom)
+        text_rect = pygame.Rect(
+            10, 10, panel_width - 20, panel_height - 20 - instruction_height
+        )
         text_box = pygame_gui.elements.UITextBox(
             relative_rect=text_rect,
             html_text="<br>".join(lines),
+            manager=self.state.pygame_gui_manager,
+            container=self.details_panel,
+        )
+
+        # Add instruction text at bottom
+        instruction_rect = pygame.Rect(
+            10,
+            panel_height - instruction_height - 5,
+            panel_width - 20,
+            instruction_height,
+        )
+        instruction_label = pygame_gui.elements.UILabel(
+            relative_rect=instruction_rect,
+            text="Press 'ESC' to close",
+            manager=self.state.pygame_gui_manager,
+            container=self.details_panel,
+        )
+
+    def _show_edge_details(self, edge: Tuple[str, str]):
+        """Show edge details in a UI overlay"""
+        self.show_edge_details = True
+        self.details_edge = edge
+        source, target = edge
+
+        # Create details panel if it doesn't exist
+        if self.details_panel:
+            self.details_panel.kill()
+
+        attrs = self.edge_attributes.get(edge, {})
+        rel_type = attrs.get("type", "Unknown")
+        props = attrs.get("properties", {})
+
+        # Get source and target node names
+        source_attrs = self.node_attributes.get(source, {})
+        target_attrs = self.node_attributes.get(target, {})
+        source_name = source_attrs.get("name", "Unknown")
+        target_name = target_attrs.get("name", "Unknown")
+
+        # Calculate position for panel (midpoint of edge)
+        source_pos = self._transform_position(self.pos[source])
+        target_pos = self._transform_position(self.pos[target])
+        edge_midpoint = (
+            (source_pos[0] + target_pos[0]) / 2,
+            (source_pos[1] + target_pos[1]) / 2,
+        )
+
+        # Create text content
+        lines = [f"Relationship: {rel_type}"]
+        lines.append(f"From: {source_name}")
+        lines.append(f"To: {target_name}")
+        lines.append("")
+        if props:
+            lines.append("Properties:")
+            for key, value in props.items():
+                if not key.startswith("graph_"):  # Skip graph_n properties
+                    lines.append(f"  {key}: {value}")
+        else:
+            lines.append("No properties")
+
+        # Create panel
+        panel_width = 300
+        instruction_height = 25  # Space for instruction text
+        panel_height = min(400, len(lines) * 25 + 40) + instruction_height
+        panel_x = int(edge_midpoint[0] - panel_width / 2)
+        panel_y = int(edge_midpoint[1] + 20)
+
+        self.details_panel = pygame_gui.elements.UIPanel(
+            relative_rect=pygame.Rect(panel_x, panel_y, panel_width, panel_height),
+            manager=self.state.pygame_gui_manager,
+            object_id="#node_details_panel",
+        )
+
+        # Add text (leave room for instruction at bottom)
+        text_rect = pygame.Rect(
+            10, 10, panel_width - 20, panel_height - 20 - instruction_height
+        )
+        text_box = pygame_gui.elements.UITextBox(
+            relative_rect=text_rect,
+            html_text="<br>".join(lines),
+            manager=self.state.pygame_gui_manager,
+            container=self.details_panel,
+        )
+
+        # Add instruction text at bottom
+        instruction_rect = pygame.Rect(
+            10,
+            panel_height - instruction_height - 5,
+            panel_width - 20,
+            instruction_height,
+        )
+        instruction_label = pygame_gui.elements.UILabel(
+            relative_rect=instruction_rect,
+            text="Press 'ESC' to close",
             manager=self.state.pygame_gui_manager,
             container=self.details_panel,
         )
@@ -336,6 +492,12 @@ class GraphVisualization:
         if not self.layout_computed or len(self.graph) == 0:
             return
 
+        # Save the current clipping rectangle
+        old_clip = screen.get_clip()
+
+        # Set clipping rectangle to restrict drawing to graph bounds
+        screen.set_clip(self.rect)
+
         # Draw background
         pygame.draw.rect(screen, Colors.DARKER_BG.value, self.rect)
         pygame.draw.rect(screen, Colors.BORDER.value, self.rect, 2)
@@ -346,11 +508,17 @@ class GraphVisualization:
                 start_pos = self._transform_position(self.pos[source])
                 end_pos = self._transform_position(self.pos[target])
 
+                # Determine edge color
+                if self.selected_edge == (source, target):
+                    edge_color = self.selected_color
+                else:
+                    edge_color = self.edge_color
+
                 # Draw edge
-                pygame.draw.line(screen, self.edge_color, start_pos, end_pos, 2)
+                pygame.draw.line(screen, edge_color, start_pos, end_pos, 2)
 
                 # Draw arrow head
-                self._draw_arrow(screen, start_pos, end_pos, self.edge_color)
+                self._draw_arrow(screen, start_pos, end_pos, edge_color)
 
         # Draw nodes
         for node_id in self.graph.nodes():
@@ -385,6 +553,9 @@ class GraphVisualization:
                     center=(int(pos[0]), int(pos[1]) + radius + 12)
                 )
                 screen.blit(text, text_rect)
+
+        # Restore the original clipping rectangle
+        screen.set_clip(old_clip)
 
     def _draw_arrow(self, screen, start, end, color):
         """Draw an arrow head at the end of an edge"""
