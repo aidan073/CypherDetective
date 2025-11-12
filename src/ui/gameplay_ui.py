@@ -420,8 +420,12 @@ class GraphVisualization:
         )
 
         # Add text (leave room for instruction at bottom)
+        details_panel_border_thickness = 1
         text_rect = pygame.Rect(
-            10, 10, panel_width - 20, panel_height - 20 - instruction_height
+            10,
+            10,
+            panel_width - 20 - 2 * details_panel_border_thickness,
+            panel_height - 20 - instruction_height - 2 * details_panel_border_thickness,
         )
         text_box = pygame_gui.elements.UITextBox(
             relative_rect=text_rect,
@@ -496,7 +500,7 @@ class GraphVisualization:
         self.details_panel = pygame_gui.elements.UIPanel(
             relative_rect=pygame.Rect(panel_x, panel_y, panel_width, panel_height),
             manager=self.state.pygame_gui_manager,
-            object_id="#node_details_panel",
+            object_id="#edge_details_panel",
         )
 
         # Add text (leave room for instruction at bottom)

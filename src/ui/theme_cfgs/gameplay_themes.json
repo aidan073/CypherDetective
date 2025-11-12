@@ -1,0 +1,28 @@
+{
+    "panel": {
+        "colours": {
+            "dark_bg":"#14101c",
+            "normal_border": "#000000"
+        }
+    },
+    "text_box": {
+        "colours": {
+            "dark_bg": "#080808",
+            "normal_border": "#b5b5b5",
+            "selected_border": "#b5b5b5",
+            "text": "#ffffff"
+        },
+        "misc": {
+            "border_width": "2",
+            "line_spacing": "1.2"
+        }
+    },
+    "button": {
+        "colours": {
+            "normal_bg": "#262626",
+            "normal_text": "#ffffff",
+            "active_bg": "#49166910",
+            "active_border": "#49166920"
+        }
+    }
+}

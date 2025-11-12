@@ -195,7 +195,7 @@ class MenuState(StateInterface):
                 relative_rect=pygame.Rect(
                     button_x, button_y, button_size[0], button_size[1]
                 ),
-                text="",  # No text, we'll blit the image
+                text="",
                 manager=self.pygame_gui_manager,
                 object_id="#case_details_button",
             )

@@ -3,6 +3,7 @@ from src.states.state_interface import StateInterface
 from src.enums.game_states import GamePlayState, GameState
 from src.ui.gameplay_ui import create_graph_visualization, GraphVisualization
 
+import os
 import pygame
 import pygame_gui
 
@@ -17,11 +18,21 @@ class GameplayState(StateInterface):
         self.pygame_gui_manager = pygame_gui.UIManager(
             (self.game.cfg.screen_width, self.game.cfg.screen_height)
         )
+        self.pygame_gui_manager.get_theme().load_theme(
+            os.path.join("src", "ui", "theme_cfgs", "gameplay_themes.json")
+        )
         self.sub_state = GamePlayState.QUERY_INPUT
 
         # pygame_gui elements
         self.query_input = None
         self.submit_button = None
+        self.hint_button = None
+
+        # Hint state
+        self.hint_shown = False
+        self.answer_shown = False
+        self.hint_text = None
+        self.answer_text = None
 
         # messages
         self.error_message = None
@@ -43,10 +54,21 @@ class GameplayState(StateInterface):
             if consumed:
                 return
 
-        # Handle submit button click
+        # Handle button clicks
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_object_id == "#submit_button":
                 self.game.db.execute_user_query(self)
+                return
+            elif event.ui_object_id == "#hint_button":
+                if not self.hint_shown:
+                    # First click: show hint
+                    self.hint_shown = True
+                    self.answer_shown = False
+                    if self.hint_button:
+                        self.hint_button.set_text("Answer")
+                elif not self.answer_shown:
+                    # Second click: show answer
+                    self.answer_shown = True
                 return
 
         if event.type == pygame.KEYDOWN:
@@ -134,29 +156,9 @@ class GameplayState(StateInterface):
             screen.blit(text, (clue_box.x + 10, y_offset))
             y_offset += 25
 
-        # Hint (if available) - left column
-        hint_bottom_y = clue_box.bottom
-        if self.game.current_level.hint:
-            hint_y = clue_box.bottom + 10
-            hint_label = self.game.cfg.font_tiny.render(
-                "HINT:", True, Colors.TEXT_DIM.value
-            )
-            screen.blit(hint_label, (left_x, hint_y))
-            hint_lines = self.game.wrap_text(
-                self.game.current_level.hint,
-                self.game.cfg.font_tiny,
-                left_width,
-            )
-            y_offset = hint_y + 20
-            for line in hint_lines:
-                text = self.game.cfg.font_tiny.render(line, True, Colors.TEXT_DIM.value)
-                screen.blit(text, (left_x, y_offset))
-                y_offset += 18
-            hint_bottom_y = y_offset
-
         # Query input box background - left column
-        # Position it after hint, or after clue box if no hint
-        input_box_y = hint_bottom_y + 10
+        # Position it directly under the lead box
+        input_box_y = clue_box.bottom + 30
 
         input_box_height = 250
         input_box = pygame.Rect(left_x, input_box_y, left_width, input_box_height)
@@ -206,6 +208,64 @@ class GameplayState(StateInterface):
                 manager=self.pygame_gui_manager,
                 object_id="#submit_button",
             )
+
+            # Create hint button in bottom right corner of input box (if hint exists)
+            if self.game.current_level.hint and not self.hint_button:
+                # Parse hint text to separate hint from answer
+                if self.hint_text is None or self.answer_text is None:
+                    hint_full = self.game.current_level.hint
+                    self.hint_text = hint_full
+                    self.answer_text = self.game.current_level.answer
+
+                # Position hint button in bottom right corner of input_box
+                hint_button_width = 100
+                hint_button_x = input_box.right - hint_button_width - 20
+                hint_button_y = button_y  # Same y as submit button
+
+                self.hint_button = pygame_gui.elements.UIButton(
+                    relative_rect=pygame.Rect(
+                        hint_button_x,
+                        hint_button_y,
+                        hint_button_width,
+                        button_height,  # Same height as submit button
+                    ),
+                    text="Hint",
+                    manager=self.pygame_gui_manager,
+                    object_id="#hint_button",
+                )
+
+        # Show hint/answer text below input box if button was clicked
+        if self.game.current_level.hint and self.hint_button:
+            text_y = input_box.bottom + 10
+            if self.hint_shown:
+                # Show hint text
+                hint_lines = self.game.wrap_text(
+                    self.hint_text,
+                    self.game.cfg.font_tiny,
+                    left_width,
+                )
+                y_offset = text_y
+                for line in hint_lines:
+                    text = self.game.cfg.font_tiny.render(
+                        line, True, Colors.TEXT_DIM.value
+                    )
+                    screen.blit(text, (left_x, y_offset))
+                    y_offset += 18
+
+                # Show answer text if answer button was clicked
+                if self.answer_shown and self.answer_text:
+                    answer_lines = self.game.wrap_text(
+                        self.answer_text,
+                        self.game.cfg.font_tiny,
+                        left_width,
+                    )
+                    answer_offset = y_offset + 10
+                    for line in answer_lines:
+                        text = self.game.cfg.font_tiny.render(
+                            line, True, Colors.TEXT_DIM.value
+                        )
+                        screen.blit(text, (left_x, answer_offset))
+                        answer_offset += 18
 
         # Store layout info for graph visualization
         self._left_column_info = {

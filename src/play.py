@@ -42,7 +42,9 @@ class GameManager:
             (self.cfg.screen_width, self.cfg.screen_height)
         )
         self.state = MenuState(self)
-        self.icon = pygame.image.load(os.path.join("src", "assets", "icon.png"))
+        self.icon = pygame.image.load(
+            os.path.join("src", "assets", "icon.png")
+        ).convert()
         self.icon = pygame.transform.scale(self.icon, (64, 64))
         pygame.display.set_icon(self.icon)
         pygame.display.set_caption("CypherDetective")
@@ -101,6 +103,7 @@ class GameManager:
         self.state.render()
         pygame.display.flip()
 
+    # TODO: Move to a util folder
     def wrap_text(self, text, font, max_width):
         """Wrap text to fit within max_width"""
         words = text.split(" ")
