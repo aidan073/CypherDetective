@@ -36,9 +36,9 @@ LEVELS = []
 # Level 1: Verified alibis
 level_1 = Level(
     level_num=1,
-    title="Verified Alibis",
-    lead="Initial interrogations determined that some alibis were verifiable. Find all suspects without verified alibis.",
-    hint="Look for suspects with the verified_alibi property set to false.",
+    title="Alibis",
+    lead="Early investigations into the homicide of John Doe have confirmed the alibis of some suspects. These suspects have been marked with 'verified_alibi = True'. Query the knowledge graph for only the names of the suspects who DON'T have a verified alibi.",
+    hint="Match and return the names of the suspects where the verified_alibi property is set to false. Make sure to return the suspect's name as 'suspect' (e.g. RETURN s.name AS suspect).",
     answer="MATCH (s:Suspect) WHERE s.verified_alibi = false RETURN s.name AS suspect",
 )
 level_1.set_ground_truth_query(LevelGroundTruth.LEVEL_1.value)
@@ -49,8 +49,8 @@ LEVELS.append(level_1)
 level_2 = Level(
     level_num=2,
     title="The Bullet's Path",
-    lead="The bullet came through the window from somewhere outside. All suspects who were in the victim's building are innocent. Find all suspects who were not at the victim's apartment building.",
-    hint="Look for suspects with a WAS_AT relationship to anything but the victim's building.",
+    lead="We've determined that the bullet came through the window from somewhere outside. Therefore, all individuals who were at John Doe's apartment building must be innocent. Find the names of the remaining suspects who were not at the victim's apartment building.",
+    hint="Get the names of suspects who do not have a WAS_AT relationship to the victim's building.",
     answer='MATCH (s:Suspect) WHERE NOT (s)-[:WAS_AT]->(:Location {name: "Victim\'s Apartment Building"}) RETURN s.name AS suspect',
 )
 level_2.set_ground_truth_query(LevelGroundTruth.LEVEL_2.value)
@@ -60,9 +60,9 @@ LEVELS.append(level_2)
 # Level 3: Hotel employees
 level_3 = Level(
     level_num=3,
-    title="The Rooftop Access",
-    lead="The bullet came from the rooftop of the Grandview Hotel. The rooftop door is always locked and can only be accessed by employees. Find all suspects who work at the Grandview Hotel.",
-    hint="Look for suspects with a WORKS_AT relationship to the Grandview Hotel.",
+    title="The Rooftop",
+    lead="Investigations have placed the bullet's origin at the rooftop of the Grandview Hotel. The rooftop door is always locked and can only be accessed by employees. Find the names of all suspects who work at the Grandview Hotel.",
+    hint="Get the names of suspects with a WORKS_AT relationship to the Grandview Hotel.",
     answer='MATCH (s:Suspect)-[:WORKS_AT]->(h:Location {name: "Grandview Hotel"}) RETURN s.name AS suspect',
 )
 level_3.set_ground_truth_query(LevelGroundTruth.LEVEL_3.value)
@@ -73,8 +73,8 @@ LEVELS.append(level_3)
 level_4 = Level(
     level_num=4,
     title="Keycard Access",
-    lead="An employee can only get a keycard if they have security level 2 or higher access at the hotel. Find all suspects with access level 2 or higher.",
-    hint="Filter hotel employees by access_level property.",
+    lead="After discussion with hotel staff, we've learned that an employee can only get a keycard for the rooftop door if they have security level 2 or higher access. Find the names of all suspects with access level 2 or higher.",
+    hint="Return the names of all suspects with their access_level property >= 2.",
     answer="MATCH (s:Suspect) WHERE s.access_level >= 2 RETURN s.name AS suspect",
 )
 level_4.set_ground_truth_query(LevelGroundTruth.LEVEL_4.value)
@@ -85,8 +85,8 @@ LEVELS.append(level_4)
 level_5 = Level(
     level_num=5,
     title="The Witness Description",
-    lead="A witness saw the suspect climbing the stairs towards the roof. They said the suspect had brown hair and was at least 6 feet tall. Find all suspects matching this description.",
-    hint="Filter suspects by hair color and height.",
+    lead="A witness reported seeing the suspect climb the stairs towards the rooftop. They described the suspect as having brown hair and being at least 6 feet tall. Find the names of all suspects matching this description.",
+    hint="Return the names of all suspects where their hair color is 'brown' AND their height is >= 6.0.",
     answer='MATCH (s:Suspect) WHERE s.hair = "brown" AND s.height >= 6.0 RETURN s.name AS suspect',
 )
 level_5.set_ground_truth_query(LevelGroundTruth.LEVEL_5.value)
@@ -97,8 +97,8 @@ LEVELS.append(level_5)
 level_6 = Level(
     level_num=6,
     title="Blood Evidence",
-    lead="A shard from a broken bottle near the presumed suspect's location had some dried blood. ABO blood testing determined that the blood type was O positive. Find all suspects with O+ blood type.",
-    hint="Filter suspects by blood_type property.",
+    lead="A shard of glass from where the bullet was fired had some dried blood on it. ABO blood testing determined that the blood type was O positive. Find the names of all suspects with O+ blood type.",
+    hint="Match and return the names of all suspects with blood_type 'O+'.",
     answer='MATCH (s:Suspect) WHERE s.blood_type = "O+" RETURN s.name AS suspect',
 )
 level_6.set_ground_truth_query(LevelGroundTruth.LEVEL_6.value)
@@ -109,8 +109,8 @@ LEVELS.append(level_6)
 level_7 = Level(
     level_num=7,
     title="The Murder Weapon",
-    lead="The murder weapon was discovered in a nearby river. The serial number showed the last owner as the victim, John Doe. A witness said John Doe mentioned selling the gun to a close friend. Find all suspects who are close friends of John Doe.",
-    hint="Look for suspects with a CLOSE_FRIEND_OF relationship to John Doe.",
+    lead="The murder weapon was discovered in a nearby river. The serial number showed the last owner as John Doe. A witness said John Doe had mentioned selling the gun to a close friend. Find the names of all suspects who were close friends of the victim, John Doe.",
+    hint="Get the names of suspects with a CLOSE_FRIEND_OF relationship to the victim, John Doe.",
     answer='MATCH (v:Victim {name: "John Doe"})<-[:CLOSE_FRIEND_OF]-(s:Suspect) RETURN s.name AS suspect',
 )
 level_7.set_ground_truth_query(LevelGroundTruth.LEVEL_7.value)
@@ -121,8 +121,8 @@ LEVELS.append(level_7)
 level_8 = Level(
     level_num=8,
     title="The Money Trail",
-    lead="An anonymous tip said the murderer has recent deposits into different banks summing up to exactly $475,500. Find the suspect whose total deposits across all banks equal this amount.",
-    hint="Sum deposit amounts using aggregation.",
+    lead="An anonymous tip said the murderer has made deposits into different banks summing up to exactly $475,500. Find the name of the suspect whose total deposits across all banks equal this amount.",
+    hint="You will need to sum the deposit amounts over all banks for each suspect using the aggregation function SUM(). This will likely require a WITH clause to group by suspect so that the SUM is calculated for each suspect.",
     answer="MATCH (s:Suspect)-[r:DEPOSITED_IN]->(:Bank) WITH s, SUM(r.amount) AS total WHERE total = 475500 RETURN s.name AS suspect",
 )
 level_8.set_ground_truth_query(LevelGroundTruth.LEVEL_8.value)

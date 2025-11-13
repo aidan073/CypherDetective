@@ -3,8 +3,7 @@ MATCH (n) DETACH DELETE n;
 
 // === Create Victim ===
 CREATE (victim:Victim {
-    name: "John Doe",
-    blood_type: "A+"
+    name: "John Doe"
 });
 
 // === Create Locations ===
@@ -53,7 +52,7 @@ CREATE
 }),
 (s5:Suspect {
     name: "Ella Fisher",
-    verified_alibi: true,
+    verified_alibi: false,
     hair: "black",
     height: 5.6,
     blood_type: "AB-",

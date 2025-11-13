@@ -98,11 +98,9 @@ class GraphVisualization:
             for node in nodes_data:
                 props = node["props"]
                 labels = node["labels"]
-                if (
-                    "Suspect" not in labels
-                    and "Victim" not in labels
-                    and "Bank" not in labels
-                ) or props.get(graph_prop, False):
+                if ("Suspect" not in labels and "Bank" not in labels) or props.get(
+                    graph_prop, False
+                ):
                     filtered_nodes.append(node)
 
             filtered_node_ids = {node["id"] for node in filtered_nodes}
@@ -311,6 +309,14 @@ class GraphVisualization:
                     self.details_panel.kill()
                     self.details_panel = None
                     consumed = True
+            elif event.mod & pygame.KMOD_CTRL:
+                if self.rect.collidepoint(pygame.mouse.get_pos()):
+                    if event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
+                        self.zoom = min(self.zoom * 1.3, 3.0)
+                        consumed = True
+                    elif event.key == pygame.K_MINUS:
+                        self.zoom = max(self.zoom / 1.3, 0.5)
+                        consumed = True
         return consumed
 
     def _get_node_at_position(self, pos: Tuple[int, int]) -> Optional[str]:

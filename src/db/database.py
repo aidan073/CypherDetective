@@ -92,6 +92,8 @@ class DatabaseConnection:
             # Execute query
             user_results = self.execute_query(current_query)
             ground_truth_results = self.execute_query(current_level.ground_truth_query)
+            print(f"User results: {user_results}")
+            print(f"\nGround truth results: {ground_truth_results}")
 
             # print(f"User results: {user_results}")
             # print(f"Ground truth results: {ground_truth_results}")
@@ -99,6 +101,9 @@ class DatabaseConnection:
             ground_truth_results_sorted = sorted(
                 ground_truth_results, key=lambda d: sorted(d.items())
             )
+            print("--------------------------------")
+            print(f"User results sorted: {user_results_sorted}")
+            print(f"\nGround truth results sorted: {ground_truth_results_sorted}")
 
             # Validate results using level validator
             if user_results_sorted == ground_truth_results_sorted:
