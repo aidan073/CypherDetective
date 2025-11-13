@@ -91,12 +91,20 @@ class GameplayState(StateInterface):
                         self.error_message = None
                         self.sub_state = GamePlayState.QUERY_INPUT
 
+            elif self.sub_state == GamePlayState.HIDDEN_RESULT:
+                if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                    self.clean_up()
+                    self.game.current_level = None
+                    self.game.update_state(GameState.LEVEL_SELECTOR)
+
     def render(self):
         """Render gameplay screen based on substate"""
         if self.sub_state == GamePlayState.QUERY_INPUT:
             self._render_query_input()
         elif self.sub_state == GamePlayState.QUERY_RESULT:
             self._render_query_result()
+        elif self.sub_state == GamePlayState.HIDDEN_RESULT:
+            self._render_hidden_result()
 
     def update(self, time_delta: float):
         """Update the state"""
@@ -326,6 +334,45 @@ class GameplayState(StateInterface):
             )
             screen.blit(text, (50, y_offset))
             y_offset += 20
+
+    def _render_hidden_result(self):
+        """Render substate HIDDEN_RESULT screen"""
+        screen = self.game.screen
+        screen.fill(Colors.DARK_BG.value)
+        message = self.game.cfg.font_large.render(
+            "Not everything is as it seems.", True, Colors.TEXT.value
+        )
+        message_rect = message.get_rect(
+            center=(
+                self.game.cfg.screen_width // 2,
+                self.game.cfg.screen_height // 2,
+            )
+        )
+        screen.blit(message, message_rect)
+
+        image = pygame.image.load(
+            os.path.join("src", "assets", "motivational_quote.png")
+        ).convert()
+        image_rect = image.get_rect(
+            center=(
+                self.game.cfg.screen_width // 2,
+                self.game.cfg.screen_height // 2 - 50,
+                image.get_width(),
+                image.get_height(),
+            )
+        )
+        screen.blit(image, image_rect)
+
+        next_text = self.game.cfg.font_medium.render(
+            "Press ENTER to continue", True, Colors.TEXT.value
+        )
+        next_rect = next_text.get_rect(
+            center=(
+                self.game.cfg.screen_width // 2,
+                self.game.cfg.screen_height // 2 + 50,
+            )
+        )
+        screen.blit(next_text, next_rect)
 
     def _render_query_result(self):
         """Render substate QUERY_RESULT screen"""

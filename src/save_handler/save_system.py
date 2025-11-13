@@ -27,7 +27,7 @@ def load_progress() -> Dict[str, Any]:
     ensure_save_dir()
 
     default_progress = {
-        "highest_level_unlocked": 1,
+        "highest_level_unlocked": 1,  # Level 0 and 1 are unlocked by default
         "levels_completed": [],
         "total_queries_attempted": 0,
         "total_queries_correct": 0,
@@ -74,13 +74,17 @@ def complete_level(level_num: int):
 
     # Unlock next level
     if level_num >= progress["highest_level_unlocked"]:
-        progress["highest_level_unlocked"] = level_num + 1
+        next_level = level_num + 1
+        progress["highest_level_unlocked"] = next_level
 
     save_progress(progress)
 
 
 def is_level_unlocked(level_num: int) -> bool:
     """Check if a level is unlocked"""
+    # Level 0 and 1 are always unlocked
+    if level_num == 0 or level_num == 1:
+        return True
     progress = load_progress()
     return level_num <= progress["highest_level_unlocked"]
 

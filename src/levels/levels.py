@@ -33,6 +33,18 @@ class Level:
 LEVELS = []
 
 
+# Level 0: Tutorial
+level_0 = Level(
+    level_num=0,
+    title="Tutorial",
+    lead="Welcome to CypherDetective. This is a tutorial level to help you get started. Try querying the knowledge graph to find all suspect's names. Just like in all future levels, be sure to return the names of the suspects as 'suspect' (e.g. RETURN s.name AS suspect).",
+    hint="Use MATCH to find all nodes with the Suspect label, then RETURN their names.",
+    answer="MATCH (s:Suspect) RETURN s.name AS suspect",
+)
+level_0.set_ground_truth_query(LevelGroundTruth.LEVEL_0.value)
+LEVELS.append(level_0)
+
+
 # Level 1: Verified alibis
 level_1 = Level(
     level_num=1,
@@ -129,10 +141,22 @@ level_8.set_ground_truth_query(LevelGroundTruth.LEVEL_8.value)
 LEVELS.append(level_8)
 
 
+# Level 9: Case Closed
+level_9 = Level(
+    level_num=9,
+    title="Case Closed",
+    lead="It seems we've found our guy, good work detective. John Doe's family can finally find some peace knowing that the murderer has been caught. It's been a pleasure working with you. Until next time...\n\n- Officer L. Grant",
+    hint="What do you need a hint for? Go get a coffee or something.",
+    answer="Not everything is as it seems. 37ff4d2021d1bb2d65d58545d7971be05f2696a11e4e0b69dfa3a3f39216295c",
+)
+level_9.set_ground_truth_query(LevelGroundTruth.LEVEL_9.value)
+LEVELS.append(level_9)
+
+
 def get_level(level_num: int) -> Level:
     """Get a level by its number"""
-    if 1 <= level_num <= len(LEVELS):
-        return LEVELS[level_num - 1]
+    if 0 <= level_num < len(LEVELS):
+        return LEVELS[level_num]
     return None
 
 

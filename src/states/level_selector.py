@@ -56,6 +56,7 @@ class LevelSelectorState(StateInterface):
             if event.key == pygame.K_ESCAPE:
                 self.game.update_state(GameState.MENU)
             elif event.key in [
+                pygame.K_0,
                 pygame.K_1,
                 pygame.K_2,
                 pygame.K_3,
@@ -64,6 +65,7 @@ class LevelSelectorState(StateInterface):
                 pygame.K_6,
                 pygame.K_7,
                 pygame.K_8,
+                pygame.K_9,
             ]:
                 level_num = int(event.unicode)
                 if is_level_unlocked(level_num):
@@ -82,7 +84,7 @@ class LevelSelectorState(StateInterface):
         title_rect = title.get_rect(center=(self.game.cfg.screen_width // 2, 100))
         screen.blit(title, title_rect)
 
-        # Level buttons - two columns of 4 levels each
+        # Level buttons - layout for 10 levels (0-9)
         total_levels = get_total_levels()
 
         button_width = 300
@@ -93,23 +95,23 @@ class LevelSelectorState(StateInterface):
         gap_width = 200
         center_x = self.game.cfg.screen_width // 2
 
-        # Left column: levels 1-4
+        # Left column: levels 0-4
         left_column_x = center_x - button_width - gap_width // 2
-        # Right column: levels 5-8
+        # Right column: levels 5-9
         right_column_x = center_x + gap_width // 2
 
         start_y = 200
 
-        for i in range(1, total_levels + 1):
+        for i in range(0, total_levels):
             level = get_level(i)
 
             # Determine column and position
             if i <= 4:
-                # Left column (levels 1-4)
+                # Left column (levels 0-4)
                 x = left_column_x
-                y = start_y + (i - 1) * spacing
+                y = start_y + i * spacing
             else:
-                # Right column (levels 5-8)
+                # Right column (levels 5-9)
                 x = right_column_x
                 y = start_y + (i - 5) * spacing
 

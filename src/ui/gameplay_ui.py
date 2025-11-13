@@ -93,7 +93,8 @@ class GraphVisualization:
             nodes_data = self.state.game.db.execute_query(nodes_query)
             relationships_data = self.state.game.db.execute_query(relationships_query)
 
-            graph_prop = f"graph_{level_num - 1}"  # property to filter by level
+            # Filter nodes by level
+            graph_prop = f"graph_{level_num - 1}" if level_num > 0 else "graph_0"
             filtered_nodes = []
             for node in nodes_data:
                 props = node["props"]
@@ -103,6 +104,7 @@ class GraphVisualization:
                 ):
                     filtered_nodes.append(node)
 
+            # Filter relationships by nodes
             filtered_node_ids = {node["id"] for node in filtered_nodes}
             filtered_relationships = []
             for rel in relationships_data:

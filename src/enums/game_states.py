@@ -10,3 +10,4 @@ class GameState(Enum):
 class GamePlayState(Enum):
     QUERY_INPUT = auto()
     QUERY_RESULT = auto()
+    HIDDEN_RESULT = auto()

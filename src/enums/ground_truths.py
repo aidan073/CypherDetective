@@ -2,6 +2,11 @@ from enum import Enum
 
 
 class LevelGroundTruth(Enum):
+    LEVEL_0 = """
+    MATCH (s:Suspect)
+    RETURN s.name AS suspect
+    """
+
     LEVEL_1 = """
     MATCH (s:Suspect)
     WHERE s.verified_alibi = false
@@ -48,3 +53,5 @@ class LevelGroundTruth(Enum):
     WHERE total = 475500
     RETURN s.name AS suspect
     """
+
+    LEVEL_9 = ""
