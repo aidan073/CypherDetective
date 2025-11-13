@@ -14,8 +14,7 @@ class LevelGroundTruth(Enum):
     """
 
     LEVEL_2 = """
-    MATCH (s:Suspect) 
-    WHERE NOT (s)-[:WAS_AT]->(:Location {name: "Victim's Apartment Building"})
+    MATCH (s:Suspect)-[:WAS_AT]->(h:Location {name: "Grandview Hotel"})
     RETURN s.name AS suspect
     """
 

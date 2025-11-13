@@ -339,16 +339,6 @@ class GameplayState(StateInterface):
         """Render substate HIDDEN_RESULT screen"""
         screen = self.game.screen
         screen.fill(Colors.DARK_BG.value)
-        message = self.game.cfg.font_large.render(
-            "Not everything is as it seems.", True, Colors.TEXT.value
-        )
-        message_rect = message.get_rect(
-            center=(
-                self.game.cfg.screen_width // 2,
-                self.game.cfg.screen_height // 2,
-            )
-        )
-        screen.blit(message, message_rect)
 
         image = pygame.image.load(
             os.path.join("src", "assets", "motivational_quote.png")
@@ -357,8 +347,6 @@ class GameplayState(StateInterface):
             center=(
                 self.game.cfg.screen_width // 2,
                 self.game.cfg.screen_height // 2 - 50,
-                image.get_width(),
-                image.get_height(),
             )
         )
         screen.blit(image, image_rect)

@@ -25,12 +25,12 @@ CREATE
 }),
 (s2:Suspect {
     name: "Ben Carter",
-    verified_alibi: true,
+    verified_alibi: false,
     hair: "brown",
     height: 6.1,
     blood_type: "O+",
     access_level: 0,
-    graph_0: true
+    graph_0: true, graph_1: true, graph_2: true
 }),
 (s3:Suspect {
     name: "Chloe Diaz",
@@ -56,7 +56,7 @@ CREATE
     hair: "black",
     height: 5.6,
     blood_type: "AB-",
-    access_level: 0,
+    access_level: 1,
     graph_0: true, graph_1: true
 }),
 (s6:Suspect {
@@ -102,7 +102,7 @@ CREATE
     height: 6.1,
     blood_type: "O+",
     access_level: 0,
-    graph_0: true, graph_1: true, graph_2: true
+    graph_0: true, graph_1: true
 });
 
 // === Create Location Relationships ===
@@ -111,9 +111,9 @@ MATCH
   (building:Location {name: "Victim's Apartment Building"}),
   (outside:Location {name: "Outside"})
 MATCH (s:Suspect)
-FOREACH (_ IN CASE WHEN s.name IN ["Alice Brown", "Ella Fisher"] THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(building))
+FOREACH (_ IN CASE WHEN s.name IN ["Alice Brown", "Ella Fisher", "Jack Knight"] THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(building))
 FOREACH (_ IN CASE WHEN s.name IN ["Chloe Diaz", "David Evans", "Frank Green", "Grace Hill", "Harry Irving", "Isla Jones"] THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(hotel))
-FOREACH (_ IN CASE WHEN s.name IN ["Jack Knight", "Ben Carter"] THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(outside));
+FOREACH (_ IN CASE WHEN s.name = "Ben Carter" THEN [1] ELSE [] END | CREATE (s)-[:WAS_AT]->(outside));
 
 // Employees (hotel workers)
 MATCH (hotel:Location {name: "Grandview Hotel"})

@@ -57,13 +57,13 @@ level_1.set_ground_truth_query(LevelGroundTruth.LEVEL_1.value)
 LEVELS.append(level_1)
 
 
-# Level 2: Exclude suspects in victim's building
+# Level 2: Include only suspects at Grandview Hotel
 level_2 = Level(
     level_num=2,
     title="The Bullet's Path",
-    lead="We've determined that the bullet came through the window from somewhere outside. Therefore, all individuals who were at John Doe's apartment building must be innocent. Find the names of the remaining suspects who were not at the victim's apartment building.",
-    hint="Get the names of suspects who do not have a WAS_AT relationship to the victim's building.",
-    answer='MATCH (s:Suspect) WHERE NOT (s)-[:WAS_AT]->(:Location {name: "Victim\'s Apartment Building"}) RETURN s.name AS suspect',
+    lead="Investigations have placed the bullet's origin at the rooftop of the Grandview Hotel. Only individuals who were at Grandview Hotel are still suspects. Find the names of the remaining suspects who were at Grandview Hotel.",
+    hint="Get the names of suspects who have a WAS_AT relationship to the Grandview Hotel.",
+    answer='MATCH (s:Suspect)-[:WAS_AT]->(h:Location {name: "Grandview Hotel"}) RETURN s.name AS suspect',
 )
 level_2.set_ground_truth_query(LevelGroundTruth.LEVEL_2.value)
 LEVELS.append(level_2)
@@ -72,8 +72,8 @@ LEVELS.append(level_2)
 # Level 3: Hotel employees
 level_3 = Level(
     level_num=3,
-    title="The Rooftop",
-    lead="Investigations have placed the bullet's origin at the rooftop of the Grandview Hotel. The rooftop door is always locked and can only be accessed by employees. Find the names of all suspects who work at the Grandview Hotel.",
+    title="Hotel Employees",
+    lead="The Grandview Hotel rooftop door is always locked and can only be accessed by employees. Find the names of all suspects who work at the Grandview Hotel.",
     hint="Get the names of suspects with a WORKS_AT relationship to the Grandview Hotel.",
     answer='MATCH (s:Suspect)-[:WORKS_AT]->(h:Location {name: "Grandview Hotel"}) RETURN s.name AS suspect',
 )
@@ -96,7 +96,7 @@ LEVELS.append(level_4)
 # Level 5: Physical description
 level_5 = Level(
     level_num=5,
-    title="The Witness Description",
+    title="The Witness",
     lead="A witness reported seeing the suspect climb the stairs towards the rooftop. They described the suspect as having brown hair and being at least 6 feet tall. Find the names of all suspects matching this description.",
     hint="Return the names of all suspects where their hair color is 'brown' AND their height is >= 6.0.",
     answer='MATCH (s:Suspect) WHERE s.hair = "brown" AND s.height >= 6.0 RETURN s.name AS suspect',
@@ -147,7 +147,7 @@ level_9 = Level(
     title="Case Closed",
     lead="It seems we've found our guy, good work detective. John Doe's family can finally find some peace knowing that the murderer has been caught. It's been a pleasure working with you. Until next time...\n\n- Officer L. Grant",
     hint="What do you need a hint for? Go get a coffee or something.",
-    answer="Not everything is as it seems. 37ff4d2021d1bb2d65d58545d7971be05f2696a11e4e0b69dfa3a3f39216295c",
+    answer="Not everything is as it seems. Try: 37ff4d2021",
 )
 level_9.set_ground_truth_query(LevelGroundTruth.LEVEL_9.value)
 LEVELS.append(level_9)

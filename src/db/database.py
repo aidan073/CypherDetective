@@ -91,16 +91,11 @@ class DatabaseConnection:
         try:
             # Execute query
             if current_level.level_num == 9:
-                if (
-                    current_query
-                    == "37ff4d2021d1bb2d65d58545d7971be05f2696a11e4e0b69dfa3a3f39216295c"
-                ):
+                if current_query == "37ff4d2021":
                     state.sub_state = GamePlayState.HIDDEN_RESULT
                 return
             user_results = self.execute_query(current_query)
             ground_truth_results = self.execute_query(current_level.ground_truth_query)
-            print(f"User results: {user_results}")
-            print(f"\nGround truth results: {ground_truth_results}")
 
             # print(f"User results: {user_results}")
             # print(f"Ground truth results: {ground_truth_results}")
@@ -108,9 +103,6 @@ class DatabaseConnection:
             ground_truth_results_sorted = sorted(
                 ground_truth_results, key=lambda d: sorted(d.items())
             )
-            print("--------------------------------")
-            print(f"User results sorted: {user_results_sorted}")
-            print(f"\nGround truth results sorted: {ground_truth_results_sorted}")
 
             # Validate results using level validator
             if user_results_sorted == ground_truth_results_sorted:
