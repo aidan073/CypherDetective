@@ -14,12 +14,12 @@ class LevelGroundTruth(Enum):
     """
 
     LEVEL_2 = """
-    MATCH (s:Suspect)-[:WAS_AT]->(h:Location {name: "Grandview Hotel"})
+    MATCH (s:Suspect)-[:WAS_AT]->(:Location {name: "Grandview Hotel"})
     RETURN s.name AS suspect
     """
 
     LEVEL_3 = """
-    MATCH (s:Suspect)-[:WORKS_AT]->(h:Location {name: "Grandview Hotel"})
+    MATCH (s:Suspect)-[:WORKS_AT]->(:Location {name: "Grandview Hotel"})
     RETURN s.name AS suspect
     """
 
@@ -42,7 +42,7 @@ class LevelGroundTruth(Enum):
     """
 
     LEVEL_7 = """
-    MATCH (v:Victim {name: "John Doe"})<-[:CLOSE_FRIEND_OF]-(s:Suspect)
+    MATCH (:Victim {name: "John Doe"})<-[:CLOSE_FRIEND_OF]-(s:Suspect)
     RETURN s.name AS suspect
     """
 

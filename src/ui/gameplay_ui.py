@@ -406,7 +406,7 @@ class GraphVisualization:
         pos = self.pos.get(node_id, (0, 0))
 
         # Create text content
-        lines = [f"Name: {name}"]
+        lines = [f"Node Name: {name}"]
         lines.append(f"Type: {', '.join(labels)}")
         lines.append("")
         lines.append("Properties:")

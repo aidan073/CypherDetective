@@ -49,7 +49,7 @@ LEVELS.append(level_0)
 level_1 = Level(
     level_num=1,
     title="Alibis",
-    lead="Early investigations into the homicide of John Doe have confirmed the alibis of some suspects. These suspects have been marked with 'verified_alibi = True'. Query the knowledge graph for only the names of the suspects who DON'T have a verified alibi.",
+    lead="Early investigations into the homicide of John Doe have confirmed the alibis of some suspects. These suspects have been marked with 'verified_alibi = true'. Query the knowledge graph for only the names of the suspects who DON'T have a verified alibi.",
     hint="Match and return the names of the suspects where the verified_alibi property is set to false. Make sure to return the suspect's name as 'suspect' (e.g. RETURN s.name AS suspect).",
     answer="MATCH (s:Suspect) WHERE s.verified_alibi = false RETURN s.name AS suspect",
 )
@@ -61,9 +61,9 @@ LEVELS.append(level_1)
 level_2 = Level(
     level_num=2,
     title="The Bullet's Path",
-    lead="Investigations have placed the bullet's origin at the rooftop of the Grandview Hotel. Only individuals who were at Grandview Hotel are still suspects. Find the names of the remaining suspects who were at Grandview Hotel.",
+    lead="Investigations have placed the bullet's origin at the rooftop of the Grandview Hotel, so only individuals who were at Grandview Hotel are still suspects. Find the names of all suspects who were at the Grandview Hotel.",
     hint="Get the names of suspects who have a WAS_AT relationship to the Grandview Hotel.",
-    answer='MATCH (s:Suspect)-[:WAS_AT]->(h:Location {name: "Grandview Hotel"}) RETURN s.name AS suspect',
+    answer='MATCH (s:Suspect)-[:WAS_AT]->(:Location {name: "Grandview Hotel"}) RETURN s.name AS suspect',
 )
 level_2.set_ground_truth_query(LevelGroundTruth.LEVEL_2.value)
 LEVELS.append(level_2)
@@ -75,7 +75,7 @@ level_3 = Level(
     title="Hotel Employees",
     lead="The Grandview Hotel rooftop door is always locked and can only be accessed by employees. Find the names of all suspects who work at the Grandview Hotel.",
     hint="Get the names of suspects with a WORKS_AT relationship to the Grandview Hotel.",
-    answer='MATCH (s:Suspect)-[:WORKS_AT]->(h:Location {name: "Grandview Hotel"}) RETURN s.name AS suspect',
+    answer='MATCH (s:Suspect)-[:WORKS_AT]->(:Location {name: "Grandview Hotel"}) RETURN s.name AS suspect',
 )
 level_3.set_ground_truth_query(LevelGroundTruth.LEVEL_3.value)
 LEVELS.append(level_3)
@@ -123,7 +123,7 @@ level_7 = Level(
     title="The Murder Weapon",
     lead="The murder weapon was discovered in a nearby river. The serial number showed the last owner as John Doe. A witness said John Doe had mentioned selling the gun to a close friend. Find the names of all suspects who were close friends of the victim, John Doe.",
     hint="Get the names of suspects with a CLOSE_FRIEND_OF relationship to the victim, John Doe.",
-    answer='MATCH (v:Victim {name: "John Doe"})<-[:CLOSE_FRIEND_OF]-(s:Suspect) RETURN s.name AS suspect',
+    answer='MATCH (:Victim {name: "John Doe"})<-[:CLOSE_FRIEND_OF]-(s:Suspect) RETURN s.name AS suspect',
 )
 level_7.set_ground_truth_query(LevelGroundTruth.LEVEL_7.value)
 LEVELS.append(level_7)
